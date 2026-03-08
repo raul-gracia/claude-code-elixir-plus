@@ -1,6 +1,6 @@
 ---
 name: elixir-thinking
-description: Use when the user asks about Elixir language patterns, code structure, module design, error handling, testing strategies, or mentions protocols, behaviours, pattern matching, with statements, comprehensions, structs, or "coming from OOP". Do NOT use for Phoenix/LiveView (use phoenix-thinking), Ecto/database (use ecto-thinking), OTP/processes (use otp-thinking), Oban (use oban-thinking), or Ash Framework (use ash-thinking).
+description: Use when the user asks about Elixir language patterns, code structure, module design, error handling, testing strategies, or mentions protocols, behaviours, pattern matching, with statements, comprehensions, structs, "coming from OOP", or deciding whether to use GenServer/processes vs plain modules/functions. Do NOT use for Phoenix/LiveView (use phoenix-thinking), Ecto/database (use ecto-thinking), OTP process implementation details (use otp-thinking), Oban (use oban-thinking), or Ash Framework (use ash-thinking).
 ---
 
 # Elixir Thinking

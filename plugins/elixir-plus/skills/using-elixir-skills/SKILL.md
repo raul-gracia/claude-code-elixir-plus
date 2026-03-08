@@ -10,8 +10,16 @@ Invoke the relevant skill BEFORE exploring code or writing any Elixir.
 | Trigger | Skill |
 |---------|-------|
 | Code, architecture, patterns, structs, protocols | `elixir-thinking` |
+| Deciding whether to use GenServer/process vs plain module/functions | `elixir-thinking` |
 | LiveView, PubSub, mount, socket, component, route | `phoenix-thinking` |
 | Context, schema, Ecto, changeset, Repo, migration | `ecto-thinking` |
-| GenServer, Supervisor, Task, ETS, Broadway | `otp-thinking` |
+| GenServer, Supervisor, Task, ETS, Broadway (implementation) | `otp-thinking` |
+| Choosing between Broadway vs Oban | `otp-thinking` |
 | Oban, job queue, background job, async processing | `oban-thinking` |
 | Ash resource, domain, policies, actions, code interface | `ash-thinking` |
+
+## Disambiguation
+
+- **"Should I use a GenServer or just a module?"** → `elixir-thinking` (process decision), NOT `otp-thinking`
+- **"Should I use Broadway or Oban?"** → `otp-thinking` (infrastructure choice), NOT `oban-thinking`
+- **"Ecto changeset in a LiveView form"** → `phoenix-thinking` (outer framework), NOT `ecto-thinking`

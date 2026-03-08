@@ -1,6 +1,6 @@
 ---
 name: otp-thinking
-description: Use when the user works with GenServer, Supervisor, Task, Agent, Registry, DynamicSupervisor, ETS, Broadway, or asks about process design, supervision trees, fault tolerance, concurrency, or "let it crash". Covers when to use processes vs plain functions. Do NOT use for Oban job queues (use oban-thinking).
+description: Use when the user works with GenServer, Supervisor, Task, Agent, Registry, DynamicSupervisor, ETS, Broadway, or asks about process design, supervision trees, fault tolerance, concurrency, choosing between Broadway vs Oban, or "let it crash". Do NOT use for deciding whether to use a process in the first place (use elixir-thinking) or for Oban job queues (use oban-thinking).
 ---
 
 # OTP Thinking

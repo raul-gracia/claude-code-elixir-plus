@@ -1,0 +1,20 @@
+{
+  "name": "claude-code-elixir-plus",
+  "owner": {
+    "name": "Raul Gracia"
+  },
+  "metadata": {
+    "description": "Enhanced Elixir/Phoenix/Ash skills, hooks, and LSP for Claude Code",
+    "homepage": "https://github.com/raul-gracia/claude-code-elixir-plus",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "elixir-plus",
+      "source": ".",
+      "description": "Elixir thinking skills, format/compile/credo hooks, and ElixirLS integration",
+      "category": "skills",
+      "keywords": ["elixir", "phoenix", "ash", "liveview", "ecto", "otp", "oban"]
+    }
+  ]
+}

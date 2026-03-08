@@ -1,6 +1,6 @@
 ---
 name: otp-thinking
-description: Use when the user works with GenServer, Supervisor, Task, Agent, Registry, DynamicSupervisor, ETS, Broadway, or asks about process design, supervision trees, fault tolerance, concurrency, choosing between Broadway vs Oban, or "let it crash". Do NOT use for deciding whether to use a process in the first place (use elixir-thinking) or for Oban job queues (use oban-thinking).
+description: Use when the user works with GenServer, Supervisor, Task, Agent, Registry, DynamicSupervisor, ETS, Broadway, or asks about process design, supervision trees, fault tolerance, concurrency, process bottleneck diagnosis, scheduler tuning, choosing between Broadway vs Oban, or "let it crash". Do NOT use for deciding whether to use a process in the first place (use elixir-thinking) or for Oban job queues (use oban-thinking).
 ---
 
 # OTP Thinking
@@ -135,6 +135,16 @@ Phoenix, Ecto, and most libraries emit telemetry events. Attach handlers:
 ```
 
 Use `Telemetry.Metrics` + reporters (StatsD, Prometheus, LiveDashboard).
+
+## Performance
+
+For process bottleneck diagnosis, ETS concurrency flags, scheduler tuning, GenServer batching, persistent_term caveats, and mailbox management, see [references/performance.md](references/performance.md).
+
+Key rules:
+- Use `:recon.proc_count/2` to find top memory/CPU/mailbox consumers
+- Use `+sbwt very_long` for sustained high-throughput workloads
+- Use `:ets.update_counter/3` for atomic increments (no GenServer needed)
+- Never update `persistent_term` frequently (triggers global GC)
 
 ## Red Flags - STOP and Reconsider
 

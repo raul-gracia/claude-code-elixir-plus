@@ -1,6 +1,6 @@
 ---
 name: phoenix-thinking
-description: Use when the user works with Phoenix Framework, LiveView, or asks about mount lifecycle, handle_event, handle_params, PubSub, channels, controllers, routes, components, sockets, or assigns. Covers LiveView gotchas like duplicate mount queries. Do NOT use for pure Ecto/database questions (use ecto-thinking) or Ash resources (use ash-thinking).
+description: Use when the user works with Phoenix Framework, LiveView, or asks about mount lifecycle, handle_event, handle_params, PubSub, channels, controllers, routes, components, sockets, assigns, endpoint tuning, Bandit/Cowboy configuration, or plug pipeline performance. Covers LiveView gotchas like duplicate mount queries. Do NOT use for pure Ecto/database questions (use ecto-thinking) or Ash resources (use ash-thinking).
 ---
 
 # Phoenix Thinking
@@ -117,6 +117,16 @@ verify_signature!(conn, body)
 ```
 
 Don't use `preserve_req_body: true`—it keeps the entire body in memory for ALL requests.
+
+## Performance
+
+For endpoint/Bandit/Cowboy tuning, plug pipeline optimization, LiveView diff minimization, PubSub scaling, connection draining, and telemetry, see [references/performance.md](references/performance.md).
+
+Key rules:
+- Set `nodelay: true` in transport options for low-latency APIs
+- Use `stream/3` for large lists in LiveView (not full assigns)
+- Remove unnecessary plugs from hot API pipelines (each one costs per request)
+- Monitor `[:vm, :total_run_queue_lengths]` — if > 0, schedulers are saturated
 
 ## Red Flags - STOP and Reconsider
 

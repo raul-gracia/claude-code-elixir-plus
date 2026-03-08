@@ -1,6 +1,6 @@
 ---
 name: elixir-thinking
-description: Use when the user asks about Elixir language patterns, code structure, module design, error handling, testing strategies, or mentions protocols, behaviours, pattern matching, with statements, comprehensions, structs, "coming from OOP", or deciding whether to use GenServer/processes vs plain modules/functions. Do NOT use for Phoenix/LiveView (use phoenix-thinking), Ecto/database (use ecto-thinking), OTP process implementation details (use otp-thinking), Oban (use oban-thinking), or Ash Framework (use ash-thinking).
+description: Use when the user asks about Elixir language patterns, code structure, module design, error handling, testing strategies, performance tuning (BEAM VM, memory, GC, binaries, iodata), or mentions protocols, behaviours, pattern matching, with statements, comprehensions, structs, "coming from OOP", or deciding whether to use GenServer/processes vs plain modules/functions. Do NOT use for Phoenix/LiveView (use phoenix-thinking), Ecto/database (use ecto-thinking), OTP process implementation details (use otp-thinking), Oban (use oban-thinking), or Ash Framework (use ash-thinking).
 ---
 
 # Elixir Thinking
@@ -184,6 +184,16 @@ Directory is auto-cleaned before each run. Works with `@moduletag :tmp_dir` for 
 | "I'll need state eventually" | YAGNI. Add process when you need it. |
 | "It's just a simple wrapper process" | Simple wrappers become bottlenecks. |
 | "This is how I'd structure it in OOP" | Rethink from data flow. |
+
+## Performance
+
+For BEAM VM tuning, memory/GC, binary handling, iodata patterns, compile-time optimizations, and diagnosis tools, see [references/performance.md](references/performance.md).
+
+Key rules for hot paths:
+- Use iodata over string concatenation (`[a, b]` not `a <> b`)
+- Pre-encode constants at compile time (`@json Jason.encode!(data)`)
+- Avoid `Application.get_env/2` in hot paths (ETS lookup per call)
+- Use `JSON` module (Elixir 1.18+) or `jsonrs` (Rust NIF) over Jason for throughput
 
 ## Red Flags - STOP and Reconsider
 

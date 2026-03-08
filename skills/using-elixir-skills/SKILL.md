@@ -1,6 +1,6 @@
 ---
 name: using-elixir-skills
-description: This skill should be used when the user works on any .ex or .exs file, mentions Elixir/Phoenix/Ecto/OTP, the project has a mix.exs, or asks "which skill should I use", "new to Elixir", "help with Elixir". Routes to the correct thinking skill BEFORE exploring code. Triggers on "implement", "add", "fix", "refactor" in Elixir projects.
+description: Auto-triggers when the user works on .ex/.exs files, mentions Elixir/Phoenix/Ecto/OTP, the project has mix.exs, or asks "which skill should I use". Routes to the correct thinking skill BEFORE code exploration. Do NOT invoke this alongside another elixir skill — it's a router, not content.
 ---
 
 Invoke the relevant skill BEFORE exploring code or writing any Elixir.

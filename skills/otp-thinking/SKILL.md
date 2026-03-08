@@ -1,6 +1,6 @@
 ---
 name: otp-thinking
-description: This skill should be used when the user asks to "add background processing", "cache this data", "run this async", "handle concurrent requests", "manage state across requests", "process jobs from a queue", "this GenServer is slow", or mentions GenServer, Supervisor, Agent, Task, Registry, DynamicSupervisor, handle_call, handle_cast, supervision trees, fault tolerance, "let it crash", or choosing between Broadway and Oban.
+description: Use when the user works with GenServer, Supervisor, Task, Agent, Registry, DynamicSupervisor, ETS, Broadway, or asks about process design, supervision trees, fault tolerance, concurrency, or "let it crash". Covers when to use processes vs plain functions. Do NOT use for Oban job queues (use oban-thinking).
 ---
 
 # OTP Thinking

@@ -1,6 +1,6 @@
 ---
 name: oban-thinking
-description: This skill should be used when the user asks to "add a background job", "process async", "schedule a task", "retry failed jobs", "add email sending", "run this later", "add a cron job", "unique jobs", "batch process", or mentions Oban, Oban Pro, workflows, job queues, cascades, grafting, recorded values, job args, or troubleshooting job failures.
+description: Use when the user works with Oban job processing, background jobs, async tasks with database persistence, job queues, retries, unique jobs, or scheduling. Covers non-Pro Oban patterns. For Oban Pro (workflows, grafts, cascades, batches), see references/oban-pro.md.
 ---
 
 # Oban Thinking

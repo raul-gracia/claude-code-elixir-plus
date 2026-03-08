@@ -1,6 +1,6 @@
 ---
 name: phoenix-thinking
-description: This skill should be used when the user asks to "add a LiveView page", "create a form", "handle real-time updates", "broadcast changes to users", "add a new route", "create an API endpoint", "fix this LiveView bug", "why is mount called twice?", or mentions handle_event, handle_info, handle_params, mount, channels, controllers, components, assigns, sockets, or PubSub. Essential for avoiding duplicate queries in mount.
+description: Use when the user works with Phoenix Framework, LiveView, or asks about mount lifecycle, handle_event, handle_params, PubSub, channels, controllers, routes, components, sockets, or assigns. Covers LiveView gotchas like duplicate mount queries. Do NOT use for pure Ecto/database questions (use ecto-thinking) or Ash resources (use ash-thinking).
 ---
 
 # Phoenix Thinking

@@ -1,6 +1,6 @@
 ---
 name: ash-thinking
-description: This skill should be used when the user asks to "create an Ash resource", "add policies", "define actions", "set up authentication", "use AshGraphql or AshJsonApi", or mentions Ash.Resource, Ash.Domain, code_interface, policies, aggregates, calculations, notifiers, or AshAuthentication. Essential for avoiding Phoenix-context-around-Ash anti-pattern.
+description: Use when the user works with Ash Framework, Ash.Resource, Ash.Domain, actions, policies, code_interface, calculations, aggregates, notifiers, or AshAuthentication. Covers the resource-as-API paradigm. Do NOT use for plain Ecto schemas (use ecto-thinking) or Phoenix contexts without Ash (use phoenix-thinking).
 ---
 
 # Ash Thinking

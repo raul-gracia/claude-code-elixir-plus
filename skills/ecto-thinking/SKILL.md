@@ -1,6 +1,6 @@
 ---
 name: ecto-thinking
-description: This skill should be used when the user asks to "add a database table", "create a new context", "query the database", "add a field to a schema", "validate form input", "fix N+1 queries", "preload this association", "separate these concerns", or mentions Repo, changesets, migrations, Ecto.Multi, has_many, belongs_to, transactions, query composition, or how contexts should talk to each other.
+description: Use when the user works with Ecto, database schemas, changesets, migrations, Repo operations, preloading, query composition, contexts/bounded-contexts, Ecto.Multi, or multi-tenancy. Covers context design and cross-context patterns. Do NOT use for Ash.Resource definitions (use ash-thinking) or Phoenix LiveView (use phoenix-thinking).
 ---
 
 # Ecto Thinking

@@ -11,7 +11,7 @@
   "plugins": [
     {
       "name": "elixir-plus",
-      "source": ".",
+      "source": "./plugins/elixir-plus",
       "description": "Elixir thinking skills, format/compile/credo hooks, and ElixirLS integration",
       "category": "skills",
       "keywords": ["elixir", "phoenix", "ash", "liveview", "ecto", "otp", "oban"]

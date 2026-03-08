@@ -1,0 +1,12 @@
+{
+  "name": "claude-code-elixir-plus",
+  "version": "1.0.0",
+  "description": "Enhanced Elixir/Phoenix/Ash skills for Claude Code. Opinionated thinking skills with Iron Laws, paradigm shifts, and gotchas from the core team.",
+  "author": {
+    "name": "Raul Gracia",
+    "url": "https://github.com/raul-gracia"
+  },
+  "homepage": "https://github.com/raul-gracia/claude-code-elixir-plus",
+  "license": "MIT",
+  "keywords": ["elixir", "phoenix", "ash", "liveview", "ecto", "otp", "oban"]
+}

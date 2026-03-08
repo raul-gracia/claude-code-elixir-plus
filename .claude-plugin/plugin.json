@@ -8,5 +8,22 @@
   },
   "homepage": "https://github.com/raul-gracia/claude-code-elixir-plus",
   "license": "MIT",
-  "keywords": ["elixir", "phoenix", "ash", "liveview", "ecto", "otp", "oban"]
+  "keywords": ["elixir", "phoenix", "ash", "liveview", "ecto", "otp", "oban"],
+  "lspServers": {
+    "elixir-ls": {
+      "command": "elixir-ls",
+      "args": [],
+      "extensionToLanguage": {
+        ".ex": "elixir",
+        ".exs": "elixir",
+        ".heex": "heex",
+        ".leex": "leex"
+      },
+      "initializationOptions": {
+        "dialyzerEnabled": true,
+        "fetchDeps": false,
+        "suggestSpecs": true
+      }
+    }
+  }
 }

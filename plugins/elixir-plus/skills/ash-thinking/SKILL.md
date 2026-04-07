@@ -7,6 +7,23 @@ description: Use when the user works with Ash Framework, Ash.Resource, Ash.Domai
 
 Mental shifts for building with the Ash Framework. These insights prevent the most common mistakes.
 
+## Tidewave MCP: Ash Introspection
+
+If Tidewave MCP tools are available, **use them to discover and explore Ash resources**:
+
+| Task | Tidewave Tool |
+|------|--------------|
+| List all domains and resources | `get_ash_resources` — returns all Ash domains with their resources |
+| Inspect resource details | `project_eval` — run `Ash.Resource.Info.attributes(MyApp.Resource)`, `.relationships/1`, `.actions/1` |
+| Check domain structure | `project_eval` — run `Ash.Domain.Info.resources(MyApp.Domain)` |
+| Discover extensions | `project_eval` — run `Spark.extensions(MyApp.Resource)` |
+| Test actions directly | `project_eval` — call code interface functions in the running app |
+| Read Ash docs for your version | `get_docs` — e.g., `get_docs("Ash.Resource")` for your exact Ash version |
+
+**Start with `get_ash_resources`** to understand the domain structure before reading any source files. Then use `project_eval` with `Ash.Resource.Info.*` functions to drill into specific resources without reading entire files.
+
+**Not installed?** → `mix igniter.install tidewave` then `claude mcp add --transport http tidewave http://localhost:4000/tidewave/mcp`
+
 ## The Iron Law
 
 ```

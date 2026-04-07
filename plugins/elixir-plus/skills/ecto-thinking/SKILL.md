@@ -7,6 +7,23 @@ description: Use when the user works with Ecto, database schemas, changesets, mi
 
 Mental shifts for Ecto and data layer design. These insights challenge typical ORM patterns.
 
+## Tidewave MCP: Database at Your Fingertips
+
+If Tidewave MCP tools are available, **use them for all database and schema work**:
+
+| Task | Tidewave Tool |
+|------|--------------|
+| List all schemas in the project | `get_ecto_schemas` — discovers all modules with `__changeset__/0`, shows file paths |
+| Run a query against the database | `execute_sql_query` — executes SQL through your Ecto repo (supports multiple repos, parameterized queries, 50-row limit) |
+| Test a changeset or Repo operation | `project_eval` — run `Repo.all(Post)`, test changesets, verify migrations in the running app |
+| Check Ecto docs for your version | `get_docs` — e.g., `get_docs("Ecto.Changeset.cast/4")` for your exact Ecto version |
+
+**Prefer `execute_sql_query` over manual psql** — it uses your app's Ecto connection, respects your repo config, and works with any database adapter.
+
+**Prefer `project_eval` over writing test scripts** — test `Repo.aggregate`, changeset pipelines, or `Ecto.Multi` operations directly in the running app.
+
+**Not installed?** → `mix igniter.install tidewave` then `claude mcp add --transport http tidewave http://localhost:4000/tidewave/mcp`
+
 ## Context = Setting That Changes Meaning
 
 Context isn't just a namespace—it changes what words mean. "Product" means different things in Checkout (SKU, name), Billing (SKU, cost), and Fulfillment (SKU, warehouse). Each bounded context may have its OWN Product schema/table.

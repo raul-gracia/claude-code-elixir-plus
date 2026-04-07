@@ -7,6 +7,22 @@ description: Use when the user works with Oban job processing, background jobs, 
 
 Paradigm shifts for Oban job processing. These insights prevent common bugs and guide proper patterns.
 
+## Tidewave MCP: Job Queue Inspection
+
+If Tidewave MCP tools are available, **use them to inspect and debug Oban jobs**:
+
+| Task | Tidewave Tool |
+|------|--------------|
+| Query job state in the database | `execute_sql_query` — e.g., `SELECT state, worker, count(*) FROM oban_jobs GROUP BY state, worker` |
+| Check Oban config at runtime | `project_eval` — run `Oban.config(Oban)` to see queues, plugins, and repo |
+| Inspect a stuck/failed job | `execute_sql_query` — `SELECT * FROM oban_jobs WHERE state = 'retryable' ORDER BY attempted_at DESC LIMIT 5` |
+| Test a worker's perform/1 | `project_eval` — build a job struct and call perform directly |
+| Check queue health | `project_eval` — run `Oban.check_queue(queue: :default)` |
+| View Oban logs | `get_logs` — grep for `Oban` to see job execution logs |
+| Read Oban docs for your version | `get_docs` — e.g., `get_docs("Oban.Worker")` for your exact Oban version |
+
+**Not installed?** → `mix igniter.install tidewave` then `claude mcp add --transport http tidewave http://localhost:4000/tidewave/mcp`
+
 ---
 
 # Part 1: Oban (Non-Pro)

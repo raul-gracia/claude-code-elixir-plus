@@ -7,6 +7,32 @@ description: Use when the user works with GenServer, Supervisor, Task, Agent, Re
 
 Paradigm shifts for OTP design. These insights challenge typical concurrency and state management patterns.
 
+## Tidewave MCP: Runtime Process Inspection
+
+If Tidewave MCP tools are available, **use `project_eval` for live process debugging**:
+
+```
+# Inspect GenServer state
+project_eval(":sys.get_state(MyApp.SomeServer)")
+
+# Find top processes by memory/reductions/message_queue
+project_eval(":recon.proc_count(:memory, 10)")
+
+# Check supervision tree
+project_eval("Supervisor.which_children(MyApp.Supervisor)")
+
+# Inspect ETS tables
+project_eval(":ets.info(:my_table)")
+project_eval(":ets.tab2list(:my_table) |> Enum.take(5)")
+
+# Check process info
+project_eval("Process.info(Process.whereis(MyApp.Worker), [:message_queue_len, :memory, :status])")
+```
+
+**Use `get_logs`** to correlate process crashes with log output — filter by level (`:error`) or grep for specific modules.
+
+**Not installed?** → `mix igniter.install tidewave` then `claude mcp add --transport http tidewave http://localhost:4000/tidewave/mcp`
+
 ## The Iron Law
 
 ```

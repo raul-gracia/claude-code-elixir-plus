@@ -7,6 +7,21 @@ description: Use when the user asks about Elixir language patterns, code structu
 
 Mental shifts required before writing Elixir. These contradict conventional OOP patterns.
 
+## Tidewave MCP: Use It First
+
+If Tidewave MCP tools are available, **use them before grep/file reads**:
+
+| Instead of... | Use Tidewave |
+|---------------|-------------|
+| Grepping for a module/function | `get_source_location` — returns file + line for any module, function, or dependency |
+| Web searching for library docs | `get_docs` — returns docs for your exact dependency versions |
+| Searching hexdocs manually | `search_package_docs` — searches hexdocs filtered to your mix.lock |
+| Writing a test script to try code | `project_eval` — evaluates code in your running app with full access to deps and IEx helpers |
+
+`project_eval` is especially powerful for Elixir exploration — test pattern matching, pipe chains, protocol implementations, and module introspection (`exports/1`, `i/1`, `h/1`) without leaving the editor.
+
+**Not installed?** → `mix igniter.install tidewave` then `claude mcp add --transport http tidewave http://localhost:4000/tidewave/mcp`
+
 ## The Iron Law
 
 ```

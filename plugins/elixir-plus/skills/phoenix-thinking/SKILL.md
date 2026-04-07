@@ -7,6 +7,25 @@ description: Use when the user works with Phoenix Framework, LiveView, or asks a
 
 Mental shifts for Phoenix applications. These insights challenge typical web framework patterns.
 
+## Tidewave MCP: Your Runtime Connection
+
+If Tidewave MCP tools are available, **they are your primary interface to the running Phoenix app**. Use them before file reads, grep, or web searches.
+
+| Task | Tidewave Tool | Why |
+|------|--------------|-----|
+| Find a module/function definition | `get_source_location` | Returns exact file + line. Faster than grep, handles deps too |
+| Read Phoenix/library docs | `get_docs` | Your exact dependency versions, not stale web results |
+| Search dependency documentation | `search_package_docs` | Searches hexdocs filtered to your mix.lock deps |
+| Test a function or pipe chain | `project_eval` | Runs in your app's context with all deps, configs, and IEx helpers |
+| Debug a request/error | `get_logs` | Server logs with level/grep filtering. Excludes tool-caused logs |
+| Query the database | `execute_sql_query` | Runs SQL through your Ecto repos. Safer than manual psql |
+| Discover schemas | `get_ecto_schemas` | Lists all Ecto schema modules and file paths |
+| Discover Ash resources | `get_ash_resources` | Lists all Ash domains and their resources (if Ash is loaded) |
+
+**Workflow:** When debugging a Phoenix issue, start with `get_logs` to see what happened, use `project_eval` to test hypotheses in the running app, and `execute_sql_query` to verify data state — all without restarting or writing throwaway scripts.
+
+**Not installed?** → `mix igniter.install tidewave` then `claude mcp add --transport http tidewave http://localhost:4000/tidewave/mcp`
+
 ## The Iron Law
 
 ```

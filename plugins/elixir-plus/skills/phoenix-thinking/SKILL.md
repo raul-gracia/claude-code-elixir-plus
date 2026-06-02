@@ -95,6 +95,56 @@ end
 
 ## Gotchas from Core Team
 
+### assign_new Goes Stale on Reconnect
+
+`assign_new/3` skips its function if the key already exists in assigns. On LiveView reconnect (the second mount over the WebSocket), prior assigns may still be present—so locale, `current_user`, timezone, or any per-mount state silently goes STALE.
+
+```elixir
+# BAD: current_user frozen from the dead render, never refreshed on reconnect
+assign_new(socket, :current_user, fn -> Accounts.get_user!(user_id) end)
+
+# GOOD: re-derived fresh on every mount
+assign(socket, :current_user, Accounts.get_user!(user_id))
+```
+
+**Rule:** Use `assign/3` for anything derived fresh per mount. Reserve `assign_new` only for values intentionally carried across the dead→live render that don't change.
+
+### Authorize in EVERY handle_event, Not Just mount
+
+Mount-level auth doesn't protect events—a client can push any event over the socket regardless of what mount rendered. Re-check authorization (via the scope/`current_user`) inside every `handle_event` that mutates or reveals data.
+
+```elixir
+def handle_event("delete", %{"id" => id}, socket) do
+  post = Blog.get_post!(socket.assigns.scope, id)  # scoped fetch
+  if post.user_id == socket.assigns.current_user.id do
+    Blog.delete_post(post)
+    {:noreply, stream_delete(socket, :posts, post)}
+  else
+    {:noreply, put_flash(socket, :error, "Not authorized")}
+  end
+end
+```
+
+### raw/1 on Untrusted Content = XSS
+
+`raw/1` / `{:safe, ...}` bypasses HEEx's automatic HTML escaping. Rendering user-supplied strings through it is stored/reflected XSS. Sanitize first (e.g. `HtmlSanitizeEx`) or don't use `raw` at all.
+
+### Big Lists Belong in Streams, Not Assigns
+
+A collection in regular assigns is kept in socket state for diffing—that's O(n) memory PER connected user. For lists over ~100 items, or any unbounded list, use `stream/3` + `stream_insert`/`stream_delete`.
+
+```elixir
+# BAD: 5k messages × every connected user, held in memory for diffing
+assign(socket, :messages, Chat.list_messages(scope))
+
+# GOOD: rendered once, dropped from socket state
+stream(socket, :messages, Chat.list_messages(scope))
+```
+
+### Hidden Inputs for Required Embedded Fields
+
+With `cast_embed`/embedded schemas, a required field that isn't rendered as a visible input won't be sent on submit—so the changeset fails validation in confusing ways. Add `<.input type="hidden" .../>` (or `hidden_input`) for those fields so they round-trip.
+
 ### LiveView terminate/2 Requires trap_exit
 
 `terminate/2` only fires if you're trapping exits—which you shouldn't do in LiveView.
@@ -150,6 +200,11 @@ Key rules:
 ## Red Flags - STOP and Reconsider
 
 - Database query in mount/3
+- `assign_new` for per-mount state (current_user, locale, timezone) — goes stale on reconnect
+- `handle_event` that mutates/reveals data without re-checking authorization
+- `raw/1` on user-supplied content (XSS)
+- Large/unbounded list in assigns instead of `stream/3`
+- Required embedded-schema field with no rendered (or hidden) input
 - Unscoped PubSub topics in multi-tenant app
 - LiveView polling external APIs directly
 - Using terminate/2 for cleanup (won't fire without trap_exit)

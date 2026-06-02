@@ -7,6 +7,31 @@ description: Use when the user works with Ecto, database schemas, changesets, mi
 
 Mental shifts for Ecto and data layer design. These insights challenge typical ORM patterns.
 
+## Iron Law: NEVER Use `:float` for Money
+
+Floats can't represent decimal cents exactly (`0.1 + 0.2 != 0.3`). Balances drift, reconciliation fails, audits find pennies that don't exist.
+
+```elixir
+# BAD — silent corruption
+add :price, :float
+
+# GOOD — exact decimal (Postgres numeric)
+add :price, :decimal, precision: 19, scale: 4
+# OR — integer cents, format at the edge
+add :price_cents, :integer
+```
+
+Arithmetic on `:decimal` MUST use the `Decimal` module, never `+`/`*`:
+
+```elixir
+# BAD
+total = price + tax            # works on floats, breaks on Decimal
+# GOOD
+total = Decimal.add(price, tax)
+```
+
+Never `cast` user-supplied money through a float on the way in — keep it `:decimal` (or integer cents) end to end.
+
 ## Tidewave MCP: Database at Your Fingertips
 
 If Tidewave MCP tools are available, **use them for all database and schema work**:
@@ -128,6 +153,30 @@ PostgreSQL rejects null bytes even though they're valid UTF-8.
 
 **Fix:** Sanitize at boundaries: `String.replace(string, "\x00", "")`
 
+### No Implicit Cross Joins
+
+`from(a in A, b in B, ...)` with no `on:` or where-correlation is a Cartesian product — every row of A × every row of B.
+
+```elixir
+# BAD — accidental cross join (every a paired with every b)
+from a in Author,
+  b in Book,
+  select: {a.name, b.title}
+
+# GOOD — explicit, correlated join
+from a in Author,
+  join: b in Book, on: b.author_id == a.id,
+  select: {a.name, b.title}
+```
+
+Always express joins with `join:` + `on:`. Never list a second source in the `from` and rely on a where clause to "fix" it later.
+
+### Dedup Shared Children Before cast_assoc
+
+When multiple parents reference the SAME child data (e.g. shared tags), passing duplicate child params inserts duplicates or trips a unique constraint.
+
+**Fix:** dedup child params before the changeset, or persist children up front with `Repo.insert` + `on_conflict:` / `Ecto.Multi`, then associate by ID. `cast_assoc` assumes each param is a distinct row.
+
 ### preload_order for Association Sorting
 
 ```elixir
@@ -156,5 +205,8 @@ Ecto.Migrator.run(Repo, [{0, Migration1}, {1, Migration2}], :up, opts)
 - Using pgbouncer without `prepare: :unnamed`
 - Testing with Cachex/GenServers assuming sandbox shares transactions
 - Accepting user input without null byte sanitization
+- `:float` (or float arithmetic) anywhere near money
+- A `from` listing two sources with no correlating `on:`/where (cross join)
+- `cast_assoc` over child params that contain duplicate shared records
 
 **Any of these? Re-read the Gotchas section.**

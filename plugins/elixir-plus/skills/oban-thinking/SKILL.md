@@ -45,6 +45,36 @@ def perform(%Oban.Job{args: %{"user_id" => user_id}}) do
 end
 ```
 
+## The Iron Law: Idempotency
+
+```
+JOBS MUST BE IDEMPOTENT. OBAN RUNS A JOB AT LEAST ONCE — OFTEN MORE.
+```
+
+Retries, crashes after partial work, and at-least-once delivery all mean `perform/1` can run again. A job that charges a card, sends an email, or increments a counter with no guard will double-execute. Make the side effect safe to repeat: check-then-act inside a transaction, use unique constraints / `on_conflict`, dedupe keys, or make the operation naturally idempotent (upsert, not insert).
+
+**This is NOT the same as `unique:`.** Uniqueness is checked at INSERT, not EXECUTION (see [Unique Jobs](#unique-jobs)) — it stops duplicate jobs being enqueued, it does NOT stop one running job from re-executing on retry.
+
+```elixir
+# Bad: re-running this job double-charges the customer
+def perform(%Oban.Job{args: %{"order_id" => order_id}}) do
+  order = Orders.get!(order_id)
+  Payments.charge!(order.amount, order.card_token)  # runs again on every retry
+  {:ok, :charged}
+end
+
+# Good: an idempotency key makes the charge safe to repeat
+def perform(%Oban.Job{args: %{"order_id" => order_id}}) do
+  order = Orders.get!(order_id)
+  # Stripe (and most processors) dedupe on the idempotency key:
+  # a repeat call with the same key returns the original charge, never a second one.
+  Payments.charge!(order.amount, order.card_token, idempotency_key: "order-#{order_id}")
+  {:ok, :charged}
+end
+```
+
+For internal side effects, guard with a unique constraint instead: `insert ... on_conflict: :nothing` or check-then-act inside `Repo.transaction/1`.
+
 ## Error Handling: Let It Crash
 
 **Don't catch errors in Oban jobs.** Let them bubble up to Oban for proper handling.
@@ -173,6 +203,7 @@ Use bulk inserts without uniqueness constraints for maximum throughput.
 
 **Non-Pro:**
 - Pattern matching on atom keys in `perform/1`
+- A non-idempotent side effect (charge/email/increment) with no guard, relying on `unique:` to prevent re-execution
 - Catching all errors and returning `{:ok, _}`
 - Wrapping job logic in try/rescue
 - Creating one job per item when processing millions of records

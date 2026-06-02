@@ -59,6 +59,13 @@ A GenServer processes ONE message at a time. Before creating one, ask:
 
 Use `handle_continue/2` for post-init work—keeps `init/1` fast and non-blocking.
 
+**Deferred reply:** stash `from` and reply later via `GenServer.reply(from, result)` from `handle_info`/`handle_continue` (caller uses an `:infinity` timeout) — useful for rate limiters / async-backed calls.
+
+```elixir
+def handle_call(:work, from, state), do: {:noreply, %{state | waiting: from}}
+def handle_info({:done, result}, state), do: (GenServer.reply(state.waiting, result); {:noreply, %{state | waiting: nil}})
+```
+
 ## Task.Supervisor, Not Task.async
 
 `Task.async` spawns a **linked** process—if task crashes, caller crashes too.
@@ -72,6 +79,18 @@ Use `handle_continue/2` for post-init work—keeps `init/1` fast and non-blockin
 **Use Task.Supervisor for:** Production code, graceful shutdown, observability, `async_nolink`.
 **Use Task.async for:** Quick experiments, scripts, when crash-together is acceptable.
 
+## Task.async_stream for Bounded Concurrency
+
+The async_nolink table above is about crash isolation. This is a different axis: running the SAME operation across N items with a CAPPED number in flight (HTTP fan-out, per-record API calls). Use `Task.async_stream/3` with `max_concurrency:` — never spawn N raw `Task.async`, which has no backpressure and can exhaust connection pools / FDs.
+
+```elixir
+urls
+|> Task.async_stream(&fetch/1, max_concurrency: 10, ordered: false, on_timeout: :kill_task)
+|> Enum.reduce(%{}, fn {:ok, res}, acc -> merge(acc, res) end)
+```
+
+**Footgun:** it's lazy (a Stream) — nothing runs until an `Enum`/`Stream.run` terminal consumes it. Add `ordered: false` when order doesn't matter (avoids head-of-line blocking); set `on_timeout:` deliberately (default crashes the caller).
+
 ## DynamicSupervisor + Registry = Named Dynamic Processes
 
 DynamicSupervisor only supports `:one_for_one` (dynamic children have no ordering). Use Registry for names—never create atoms dynamically:
@@ -80,7 +99,18 @@ DynamicSupervisor only supports `:one_for_one` (dynamic children have no orderin
 defp via_tuple(id), do: {:via, Registry, {MyApp.Registry, id}}
 ```
 
-**PartitionSupervisor** scales DynamicSupervisor for millions of children.
+### PartitionSupervisor: When the Parent Is the Bottleneck
+
+PartitionSupervisor runs N copies of a child (one per scheduler) and routes by key. It's about **throughput/serialization, not child count** — reach for it when a SINGLE DynamicSupervisor or named GenServer is itself the serialization point (the parent/owner, not the children).
+
+```elixir
+{PartitionSupervisor, child_spec: DynamicSupervisor, name: MyApp.Sup, partitions: System.schedulers_online()}
+
+# Address a partition by key, not a plain name:
+DynamicSupervisor.start_child({:via, PartitionSupervisor, {MyApp.Sup, key}}, spec)
+```
+
+**Footguns:** measure a real bottleneck first — premature partitioning otherwise. Routing is by key, so hot keys still serialize onto one partition.
 
 ## :pg for Distributed, Registry for Local
 
@@ -120,6 +150,24 @@ Use `:max_restarts` and `:max_seconds` to prevent restart loops.
 
 Think about failure cascades BEFORE coding.
 
+### Toggle Children via :ignore, Not if-Lists
+
+To enable a process per environment, list ALL children unconditionally and let each `start_link/1` check its own config, returning `:ignore` when off:
+
+```elixir
+def start_link(opts) do
+  if Application.get_env(:my_app, __MODULE__)[:enabled],
+    do: GenServer.start_link(__MODULE__, opts, name: __MODULE__),
+    else: :ignore
+end
+```
+
+**Footgun:** the `if [child] else [] end` approach scrambles child ORDERING (which encodes restart dependencies) and is error-prone. `:ignore` keeps the tree healthy with no running process.
+
+### Startup Side-Effects Are Tree-Level Ordering
+
+`handle_continue` defers slow init WITHIN a process. At the TREE level: if a startup side-effect (telemetry, cache warm) is independent of siblings, run it as a `Task` child placed LAST; if siblings depend on its result, do it synchronously in an init GenServer placed FIRST. **Footgun:** child position is load-bearing — a Task placed early can signal "startup complete" before later children that actually fail.
+
 ## Abstraction Decision Tree
 
 ```
@@ -145,6 +193,14 @@ Need state?
 | Disk persistence | DETS (2GB limit) |
 | Transactions/Distribution | Mnesia |
 
+**ETS crash survival via `:heir`:** when losing a cache on owner crash is expensive to rebuild, designate a dormant heir — on owner death the table transfers (`{:"ETS-TRANSFER", tab, from, data}`) instead of being destroyed.
+
+```elixir
+:ets.new(:cache, [:protected, :named_table, {:heir, heir_pid, nil}])
+```
+
+**Footgun:** real added complexity — not every table needs an heir. Only when rebuild cost > complexity.
+
 ## :sys Debugs ANY OTP Process
 
 ```elixir
@@ -169,8 +225,18 @@ For process bottleneck diagnosis, ETS concurrency flags, scheduler tuning, GenSe
 Key rules:
 - Use `:recon.proc_count/2` to find top memory/CPU/mailbox consumers
 - Use `+sbwt very_long` for sustained high-throughput workloads
-- Use `:ets.update_counter/3` for atomic increments (no GenServer needed)
+- Use `:ets.update_counter/3` for atomic increments — but for pure integer counters, `:counters`/`:atomics` beat both ETS and a serializing GenServer (lock-free, hardware-accelerated)
 - Never update `persistent_term` frequently (triggers global GC)
+
+### Lock-Free Counters: :counters and :atomics
+
+```elixir
+ref = :counters.new(1, [:write_concurrency])
+:counters.add(ref, 1, 1)
+:counters.get(ref, 1)
+```
+
+Use `:atomics` (or `:counters` without `:write_concurrency`) when every read must be EXACT; use `:counters` with `:write_concurrency` for max write throughput at the cost of EVENTUALLY-CONSISTENT reads. **Footgun:** never use write_concurrency counters for balances/quotas where a read must be exact. They're fixed-size integer arrays (not KV) — pass the ref around or stash it in `persistent_term`.
 
 ## Red Flags - STOP and Reconsider
 
@@ -180,6 +246,10 @@ Key rules:
 - Single GenServer becoming throughput bottleneck
 - Using Broadway for background jobs (use Oban)
 - Using Oban for external queue consumption (use Broadway)
+- Spawning N raw `Task.async` over a collection (no backpressure → use `async_stream` with `max_concurrency:`)
+- Conditional `if [child] else [] end` in a child list (scrambles ordering → return `:ignore` from `start_link/1`)
+- Reaching for PartitionSupervisor without measuring the parent as a real bottleneck
+- `write_concurrency` counters for balances/quotas requiring exact reads
 - No supervision strategy reasoning
 
 **Any of these? Re-read The Iron Law and use the Abstraction Decision Tree.**

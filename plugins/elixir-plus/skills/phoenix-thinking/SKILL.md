@@ -1,6 +1,6 @@
 ---
 name: phoenix-thinking
-description: Use when the user works with Phoenix Framework, LiveView, or asks about mount lifecycle, handle_event, handle_params, PubSub, channels, controllers, routes, components, sockets, assigns, endpoint tuning, Bandit/Cowboy configuration, or plug pipeline performance. Covers LiveView gotchas like duplicate mount queries. Do NOT use for pure Ecto/database questions (use ecto-thinking) or Ash resources (use ash-thinking).
+description: Use when the user works with Phoenix Framework, LiveView, or asks about mount lifecycle, handle_event, handle_params, PubSub, channels, controllers, routes, components, sockets, assigns, key comprehensions, colocated hooks/CSS, JS commands, endpoint tuning, Bandit/Cowboy configuration, or plug pipeline performance. Covers LiveView gotchas like duplicate mount queries. Do NOT use for pure Ecto/database questions (use ecto-thinking) or Ash resources (use ash-thinking).
 ---
 
 # Phoenix Thinking
@@ -141,6 +141,21 @@ assign(socket, :messages, Chat.list_messages(scope))
 stream(socket, :messages, Chat.list_messages(scope))
 ```
 
+### Key Comprehensions for Mutable Lists (LiveView 1.1)
+
+A plain `:for` comprehension resends the **entire list** over the wire whenever its assign changes. Add a `:key` (a stable identifier) and LiveView optimises the diff — on reorder/insert it sends index remaps so the client moves DOM nodes instead of re-rendering them.
+
+```heex
+<div :for={post <- @posts} :key={post.id}>
+  {post.title}
+</div>
+```
+
+This is a **third list-rendering option** alongside streams and live components, with less bookkeeping than either:
+- **Key comprehensions** → general mutable / reordered lists.
+- **Streams** → when you accept the manual `stream_insert`/`stream_delete` bookkeeping (and want items dropped from socket memory — see above).
+- **Live components** → only when separate change-tracking is genuinely warranted.
+
 ### Hidden Inputs for Required Embedded Fields
 
 With `cast_embed`/embedded schemas, a required field that isn't rendered as a visible input won't be sent on submit—so the changeset fails validation in confusing ways. Add `<.input type="hidden" .../>` (or `hidden_input`) for those fields so they round-trip.
@@ -186,6 +201,56 @@ verify_signature!(conn, body)
 ```
 
 Don't use `preserve_req_body: true`—it keeps the entire body in memory for ALL requests.
+
+## Colocation: Keep JS and CSS Next to the Component
+
+### Colocated JS Hooks (LiveView 1.1)
+
+Write a hook inline next to the component instead of a separate file in `assets/`. It's extracted at compile time into a `phoenix-colocated` folder and bundled by ESBuild like any normal import — so **no CSP problems** and no `assets/` naming conflicts. ESBuild wiring is auto-included in new Phoenix 1.8 projects.
+
+```heex
+<div id="my-chart" phx-hook=".MyChart">
+  <script :type={Phoenix.LiveView.ColocatedHook} name=".MyChart">
+    export default { mounted() { /* ... */ } }
+  </script>
+</div>
+```
+
+### Colocated CSS (LiveView 1.2)
+
+Same model with an inline `<style>` tag, extracted at compile time and bundled into `app.css`. Optional **scoping** exists but is **NOT on by default** — native CSS `@scope` is too new and Firefox breaks when morphdom mutates the DOM. Don't rely on scoped colocated CSS in production yet.
+
+### Pure Client-Side Interactivity → Web Components, Not Hooks
+
+For purely client-side behaviour, reach for a **web component**, not a `phx-hook` — hooks "get complicated fast" once they manage their own state and lifecycle. Use hooks for the LiveView↔JS bridge; use web components for self-contained client widgets.
+
+## JS Commands and Forms
+
+### Push JS Structs Over the Wire (LiveView 1.2)
+
+You can put `JS` commands (e.g. `JS.toggle_class`) **inside a `push_event` payload** — no need to encode them into a template attribute and reference them from `liveSocket` JS. Auto-encoded when using Jason or the built-in JSON module; for other encoders call `JS.to_encodable/1` yourself.
+
+```elixir
+# server
+{:noreply, push_event(socket, "highlight", %{toggle: JS.toggle_class("ring", to: "#banner")})}
+```
+
+```js
+// hook — run the pushed JS command on the element
+this.handleEvent("highlight", ({toggle}) => this.js().execJS(this.el, toggle))
+```
+
+### Opt Out of Unused-Field Form Tracking (LiveView 1.2)
+
+Since 1.0, every untouched form input sends a separate "unused field" message over the wire. A per-field attribute lets you opt out — worth it for forms with many inputs.
+
+### Message a Parent From a Function Component
+
+Pass a function as an attribute (the current idiom — acknowledged imperfect):
+
+```heex
+<.child on_select={fn id -> send(self(), {:selected, id}) end} />
+```
 
 ## Performance
 

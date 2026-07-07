@@ -1,5 +1,7 @@
 # Skill Evaluation Plan
 
+> **HISTORICAL (2026-07-07):** this eval plan targets the retired 7-skill layout (router + thinking skills). The plugin now ships a single `elixir-runtime` capability skill — see git history for the old layout.
+
 Run these evals in a fresh Claude Code session inside an Elixir project (e.g. `~/Code/ashdemo` or any repo with `mix.exs`).
 
 ## How to Run

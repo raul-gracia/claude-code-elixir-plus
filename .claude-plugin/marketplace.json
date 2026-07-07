@@ -4,15 +4,15 @@
     "name": "Raul Gracia"
   },
   "metadata": {
-    "description": "Enhanced Elixir/Phoenix/Ash skills, hooks, and LSP for Claude Code",
+    "description": "Elixir/Phoenix runtime capability skill, hooks, and LSP for Claude Code",
     "homepage": "https://github.com/raul-gracia/claude-code-elixir-plus",
-    "version": "1.0.0"
+    "version": "2.0.0"
   },
   "plugins": [
     {
       "name": "elixir-plus",
       "source": "./plugins/elixir-plus",
-      "description": "Elixir thinking skills, format/compile/credo hooks, and ElixirLS integration",
+      "description": "Elixir runtime capability skill (Tidewave + Oban Pro), format/compile/credo hooks, and ElixirLS integration",
       "category": "skills",
       "keywords": ["elixir", "phoenix", "ash", "liveview", "ecto", "otp", "oban"]
     }

@@ -4,9 +4,9 @@ Agent-facing guide for working in this repo. README.md is user-facing; this file
 
 ## What this repo is
 
-A Claude Code plugin marketplace publishing one plugin (`elixir-plus`) with seven thinking skills, four hooks, and ElixirLS integration for Elixir/Phoenix/Ash work. Auto-installed via `claude plugins install elixir-plus@claude-code-elixir-plus`. Sister repo: `claude-code-raul-skills` (everything non-Elixir) at `~/Code/claude-code-raul-skills/`.
+A Claude Code plugin marketplace publishing one plugin (`elixir-plus`) with one capability skill (`elixir-runtime`), four hooks, and ElixirLS integration for Elixir/Phoenix/Ash work. Auto-installed via `claude plugins install elixir-plus@claude-code-elixir-plus`. Sister repo: `claude-code-raul-skills` (everything non-Elixir) at `~/Code/claude-code-raul-skills/`.
 
-Scope is strictly Elixir ecosystem: Elixir, Phoenix, Ecto, OTP, Oban, Ash, plus a router. Anything broader (Ruby, fullstack, deployment via Kamal, infra, business strategy) goes in the sister repo.
+Scope is strictly the Elixir ecosystem, and deliberately thin: general Elixir/OTP/Phoenix/Ecto/Ash pedagogy lives in the model's training data, so this plugin carries only the durable non-training-data payload — the Tidewave MCP runtime grant, the closed-source Oban Pro reference, and version-gated facts (each with a sunset note). Anything broader (Ruby, fullstack, deployment via Kamal, infra, business strategy) goes in the sister repo.
 
 ## Repo layout
 
@@ -26,7 +26,7 @@ EVAL_PLAN.md                      plugin evaluation methodology (legacy, kept fo
 
 ### Skills are NOT prefixed
 
-Unlike the sister repo (`claude-code-raul-skills`), skills here have no prefix. Directories are `elixir-thinking`, `phoenix-thinking`, etc. Frontmatter `name:` matches the directory exactly. Do not add prefixes.
+Unlike the sister repo (`claude-code-raul-skills`), skills here have no prefix. The directory is `elixir-runtime`. Frontmatter `name:` matches the directory exactly. Do not add prefixes.
 
 ### Plugin manifest names (the bug that broke updates in April 2026)
 
@@ -49,12 +49,15 @@ Semver: bump major for breaking changes, minor for new skills/hooks, patch for c
 
 ## Skills
 
-The seven skills follow a router + domain-skills pattern:
+One capability skill: `elixir-runtime`. It is auto-injected via the `SessionStart` hook when `mix.exs` exists, and also triggers natively on Elixir/Phoenix mentions via its `description`. It carries:
 
-- `using-elixir-skills` — router, auto-injected via `SessionStart` hook when `mix.exs` exists. Edits to its routing table affect every other skill's discoverability.
-- `elixir-thinking`, `phoenix-thinking`, `ecto-thinking`, `otp-thinking`, `oban-thinking`, `ash-thinking` — domain skills. Each has Iron Laws (non-negotiable rules), paradigm shifts, and gotchas distilled from core team guidance.
+- The Tidewave MCP capability table + "prefer runtime introspection over grep" guidance + install one-liner.
+- Version-gated facts (Elixir 1.18 JSON, Phoenix 1.8 scopes, Ecto 3.12 `Repo.transact`, OTP 24 sets/`:pg`), each with an explicit sunset annotation so they get deleted once models train past them.
+- A pointer to the Oban Pro reference (closed-source, genuinely under-represented in training data).
 
-Reference docs live in `skills/<skill>/references/*.md` for content too deep for upfront load. Examples: `elixir-thinking/references/performance.md`, `oban-thinking/references/oban-pro.md`. Reference them from `SKILL.md` so they load on demand.
+Do NOT re-add general Elixir/OTP/Phoenix/Ecto/Ash pedagogy, decision trees, or "NO X IN Y" rule tables — that is training-data content that rots via version pins. This was the whole point of collapsing the earlier seven-skill pedagogy plugin.
+
+Reference docs live in `skills/<skill>/references/*.md` for content too deep for upfront load. Current example: `elixir-runtime/references/oban-pro.md`. Reference them from `SKILL.md` so they load on demand.
 
 ## Hooks
 
@@ -62,7 +65,7 @@ Four hooks ship with the plugin, registered via `plugin.json`:
 
 | Hook | Event | Path | Purpose |
 |---|---|---|---|
-| `session-start.sh` | `SessionStart` | `hooks/session-start.sh` | Inject `using-elixir-skills` routing table when `mix.exs` exists |
+| `session-start.sh` | `SessionStart` | `hooks/session-start.sh` | Inject `elixir-runtime` skill when `mix.exs` exists |
 | `format-elixir.sh` | `PostToolUse` (Edit/Write) | `hooks/format-elixir.sh` | Run `mix format` on changed `.ex`/`.exs` |
 | `compile-elixir.sh` | `PostToolUse` (Edit/Write) | `hooks/compile-elixir.sh` | Run `mix compile --warnings-as-errors` (skips `.exs`) |
 | `credo-elixir.sh` | `PreToolUse` (commit) | `hooks/credo-elixir.sh` | Run `mix credo`; block commit on issues |
@@ -82,21 +85,22 @@ Requires `elixir-ls` on PATH. The plugin does not bundle the binary.
 
 ## Adding a new skill
 
-1. `mkdir plugins/elixir-plus/skills/<name>-thinking/` (suffix `-thinking` for consistency, no `rg-` prefix)
+Only add a skill if it carries durable non-training-data payload (a capability/tool grant, a closed-source library reference, or a version fact with a sunset note) — NOT general pedagogy the model already knows.
+
+1. `mkdir plugins/elixir-plus/skills/<name>/` (no `rg-` prefix)
 2. Write `SKILL.md` with frontmatter:
    ```yaml
    ---
-   name: <name>-thinking
-   description: <Use when... triggers... Do NOT use for...>
+   name: <name>
+   description: <Use when... triggers...>
    ---
    ```
-3. Update `using-elixir-skills/SKILL.md` routing table to dispatch to the new skill on the right keywords.
-4. If the skill needs deep-dive content, put it in `skills/<name>-thinking/references/*.md`.
-5. Add a row to `README.md`.
-6. Bump `plugins/elixir-plus/.claude-plugin/plugin.json` `version`.
-7. Commit + push.
+3. If the skill needs deep-dive content, put it in `skills/<name>/references/*.md` and link it from `SKILL.md`.
+4. Add a row to `README.md`.
+5. Bump `plugins/elixir-plus/.claude-plugin/plugin.json` `version`.
+6. Commit + push.
 
-The `description` field drives router dispatch. Be specific about Elixir-version features (e.g. Ash 3.x), the file extensions and module patterns that trigger it, and what to defer to other skills. The router uses negative routing too ("Do NOT use for X — use Y") to prevent overlap.
+The `description` field drives native skill dispatch — the model reads it to decide when the skill applies, so no hand-coded router is needed. Be specific about the file extensions, module patterns, and Elixir-version features that make it relevant.
 
 ## Commit conventions
 

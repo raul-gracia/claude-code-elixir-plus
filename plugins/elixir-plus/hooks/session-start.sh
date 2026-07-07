@@ -18,8 +18,8 @@ EOF
     exit 0
 fi
 
-# Read the using-elixir-skills SKILL.md
-skill_content=$(cat "${PLUGIN_ROOT}/skills/using-elixir-skills/SKILL.md" 2>&1 || echo "Error reading skill")
+# Read the elixir-runtime SKILL.md
+skill_content=$(cat "${PLUGIN_ROOT}/skills/elixir-runtime/SKILL.md" 2>&1 || echo "Error reading skill")
 
 # Escape for JSON using pure bash (works on macOS and Linux)
 escape_for_json() {

@@ -1,6 +1,6 @@
 {
   "name": "elixir-plus",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Elixir/Phoenix runtime capability skill for Claude Code. Grants Tidewave MCP runtime introspection plus closed-source Oban Pro reference and version-gated facts.",
   "author": {
     "name": "Raul Gracia",

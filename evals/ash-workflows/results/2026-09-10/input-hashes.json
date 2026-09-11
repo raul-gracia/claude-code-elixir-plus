@@ -1,0 +1,13 @@
+{
+  "baseline": {
+    "elixir-runtime/SKILL.md": "10e8e4d8a6fb34d52611e18d9166f250624ba4a0bf63323e02f072408a13a920",
+    "elixir-runtime/references/oban-pro.md": "27c8fb3603beee3cfe818b294fe4ff4836856a4f3e7fc890ce13c1338b199a7b"
+  },
+  "candidate": {
+    "elixir-runtime/SKILL.md": "6f5a3b6ec58bedc1fe6f1b1fc82b10b551a13f33875e35c55690501e38ec328d",
+    "elixir-runtime/references/ash-oban.md": "14b780cc366de7df03d582e3dea153a3136ed33d9b6e79ac38ab017e1ff60425",
+    "elixir-runtime/references/oban-pro.md": "84b904a8d3f543b0069a61d9f81b9b138f4ea69ac7106dc189d27450309e11ed"
+  },
+  "prompts": "5152e5867dcdca03388da1c9c15429b0f45f1dc5a5c63d662d1244e7fd7633ed",
+  "rubric": "9511850eb1edf8e3ef15c7f1c3b56bedffc2601f1411d608dadc2837db4364b8"
+}

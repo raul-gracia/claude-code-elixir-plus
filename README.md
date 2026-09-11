@@ -2,7 +2,7 @@
 
 A Claude Code plugin that grants Claude runtime capabilities for Elixir, Phoenix, Ecto, OTP, Oban, and Ash work. It bundles one capability skill (`elixir-runtime`), four automated hooks (format, compile, credo, session context injection), and ElixirLS integration.
 
-The skill is deliberately thin. General Elixir/OTP/Phoenix/Ecto/Ash pedagogy already lives in the model's training data, so the plugin carries only what a frontier model *can't* reliably know on its own: the Tidewave MCP runtime-introspection grant, a reference for the closed-source Oban Pro library, and a handful of version-gated facts (each annotated with a sunset note for when the model's training catches up).
+The skill provides runtime introspection and directs Ash work to documentation for the application's installed versions. General framework tutorials stay upstream. An optional AshOban reference covers workflow decisions and version-sensitive operational behavior, while the existing Oban Pro reference supplies details for the commercial library.
 
 ## Installation
 
@@ -16,21 +16,22 @@ claude plugin install /path/to/claude-code-elixir-plus
 
 ## Skill
 
-The plugin ships one capability skill: `elixir-runtime`. It triggers on Elixir/Phoenix work (`.ex`/`.exs` files, `mix.exs` present, or mentions of Elixir/Phoenix/OTP/Ecto/Ash/Oban) and carries only the durable, non-training-data payload.
+The plugin ships one capability skill, `elixir-runtime`, for Elixir/Phoenix projects and explicit Ash/AshOban tasks. Its description supports native selection; the session hook injects it when `mix.exs` exists in the working directory.
 
 | Skill | Triggers When You... | Grants |
 |-------|---------------------|--------|
-| `elixir-runtime` | Work on an Elixir/Phoenix project (`mix.exs` present) | Tidewave MCP runtime-introspection guidance (`project_eval`, `get_docs`, `get_source_location`, `execute_sql_query`, `get_logs`, schema discovery), version-gated facts with sunset notes, and a pointer to the Oban Pro reference. |
+| `elixir-runtime` | Work on Elixir/Phoenix projects or Ash resources, policies and background workflows | Tidewave introspection, installed-version documentation routing, optional AshOban workflow guidance and an Oban Pro reference. |
 
 ### Reference files
 
 | File | Skill | Why it's here |
 |------|-------|---------------|
 | `elixir-runtime/references/oban-pro.md` | `elixir-runtime` | Oban Pro (workflows, grafts, cascades, batches) is commercial/closed-source and under-represented in training data. |
+| `elixir-runtime/references/ash-oban.md` | `elixir-runtime` | Conditional guidance for Ash background work, including domain state, reconciliation, identity and version-sensitive scheduling. |
 
 ### Why one thin skill
 
-Earlier versions shipped seven "thinking" skills covering Elixir/OTP/Phoenix/Ecto/Ash/Oban pedagogy plus a router. A frontier model already knows that material from its training data, and version-pinned rule tables rot as the ecosystem moves. The plugin now keeps only what the model genuinely lacks: a runtime capability grant (Tidewave), a closed-source library reference (Oban Pro), and a few version facts — each carrying a sunset note for when to delete it. Skill dispatch is handled natively by the model reading the skill's `description`; no hand-coded router is needed.
+Earlier versions shipped seven "thinking" skills and a router. The current entrypoint stays small and loads detailed references when a task needs them. Ash background work gets a focused review procedure, with verified version facts and concrete revisit conditions; ordinary Phoenix work does not load it. The [current evaluation procedure](evals/ash-workflows/README.md) measures the resulting decisions and distinguishes reasoning evidence from application execution tests.
 
 ## Hooks
 

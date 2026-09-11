@@ -6,7 +6,7 @@ Agent-facing guide for working in this repo. README.md is user-facing; this file
 
 A Claude Code plugin marketplace publishing one plugin (`elixir-plus`) with one capability skill (`elixir-runtime`), four hooks, and ElixirLS integration for Elixir/Phoenix/Ash work. Auto-installed via `claude plugins install elixir-plus@claude-code-elixir-plus`. Sister repo: `claude-code-raul-skills` (everything non-Elixir) at `~/Code/claude-code-raul-skills/`.
 
-Scope is strictly the Elixir ecosystem, and deliberately thin: general Elixir/OTP/Phoenix/Ecto/Ash pedagogy lives in the model's training data, so this plugin carries only the durable non-training-data payload — the Tidewave MCP runtime grant, the closed-source Oban Pro reference, and version-gated facts (each with a sunset note). Anything broader (Ruby, fullstack, deployment via Kamal, infra, business strategy) goes in the sister repo.
+Scope is strictly the Elixir ecosystem. Keep the capability entrypoint small, route framework details to installed-version documentation, and load specialized references only when relevant. The approved AshOban workflow procedure covers domain-state recovery and execution identity alongside versioned operational facts; it has behavioral evaluations under `evals/ash-workflows/`. Broader work such as Ruby, fullstack or deployment belongs in the sister repo.
 
 ## Repo layout
 
@@ -20,6 +20,8 @@ plugins/elixir-plus/
     references/*.md               progressive-disclosure deep-dives
 README.md                         user-facing
 EVAL_PLAN.md                      plugin evaluation methodology (legacy, kept for reference)
+evals/ash-workflows/              current behavioral evaluation prompts, rubric and evidence
+plans/                           approved implementation plans and completion evidence
 ```
 
 ## Naming convention (HARD RULES)
@@ -49,15 +51,17 @@ Semver: bump major for breaking changes, minor for new skills/hooks, patch for c
 
 ## Skills
 
-One capability skill: `elixir-runtime`. It is auto-injected via the `SessionStart` hook when `mix.exs` exists, and also triggers natively on Elixir/Phoenix mentions via its `description`. It carries:
+One capability skill: `elixir-runtime`. It is auto-injected via the `SessionStart` hook when `mix.exs` exists, and also supports native selection for Elixir/Phoenix and Ash/AshOban tasks via its `description`. It carries:
 
 - The Tidewave MCP capability table + "prefer runtime introspection over grep" guidance + install one-liner.
 - Version-gated facts (Elixir 1.18 JSON, Phoenix 1.8 scopes, Ecto 3.12 `Repo.transact`, OTP 24 sets/`:pg`), each with an explicit sunset annotation so they get deleted once models train past them.
 - A pointer to the Oban Pro reference (closed-source, genuinely under-represented in training data).
+- Installed-version Ash documentation routing and resource/trigger introspection pointers.
+- A conditional AshOban workflow reference covering reconstruction, identity and operational traps, with a separate behavioral evaluation suite.
 
-Do NOT re-add general Elixir/OTP/Phoenix/Ecto/Ash pedagogy, decision trees, or "NO X IN Y" rule tables — that is training-data content that rots via version pins. This was the whole point of collapsing the earlier seven-skill pedagogy plugin.
+Keep general Elixir/OTP/Phoenix/Ecto/Ash tutorials upstream. The AshOban reference is the specifically approved workflow scope from DC-198; preserve contextual choices such as ordinary workers for temporary imports. New guidance must justify its context cost with a capability, a verified compatibility issue or evaluated behavior. Retain source versions and concrete revisit conditions for operational facts.
 
-Reference docs live in `skills/<skill>/references/*.md` for content too deep for upfront load. Current example: `elixir-runtime/references/oban-pro.md`. Reference them from `SKILL.md` so they load on demand.
+Reference docs live in `skills/<skill>/references/*.md` and are linked from `SKILL.md` for conditional loading. The current references are `ash-oban.md` and `oban-pro.md`; keep Pro chunk mechanics in the latter.
 
 ## Hooks
 

@@ -160,9 +160,9 @@ For testing recorded values between workers, insert predecessor jobs with pre-fi
 
 When an AshOban workload needs batching, inspect the installed AshOban and Oban Pro versions and read the matching chunk documentation. The integration below was verified against [AshOban 0.8.14](https://ash-oban.hexdocs.pm/triggers-and-scheduled-actions.html) on 2026-09-10; revisit it when either dependency or the action's atomic behavior changes.
 
-The scheduler still creates one job per matching record before Pro's ChunkWorker collects those jobs and passes a batch to an Ash bulk update or destroy action. Configuring `chunks` does not reduce scheduler insertion to one job per batch. Batches are partitioned by actor and tenant, with optional additional partition keys.
+The scheduler still creates one job per matching record. Pro's ChunkWorker collects those jobs and passes a batch to an Ash bulk update or destroy action; configuring `chunks` does not reduce scheduler insertion to one job per batch. Batches are partitioned by actor and tenant, with optional additional partition keys.
 
-Atomic actions can reduce SQL round trips, while non-atomic actions can use a streaming strategy. Remote effects still need their own retry/idempotency design. Chunk size, timeout and queue concurrency should reflect the provider and database limits; a concurrency slot represents a running chunk rather than one individual record.
+Atomic actions can reduce SQL round trips. Non-atomic actions can use a streaming strategy, and remote effects still need their own retry/idempotency design. Chunk size, timeout and queue concurrency should reflect the provider and database limits; a concurrency slot represents a running chunk rather than one individual record.
 
 Chunk integration requires Pro and supports update/destroy actions in that verified release. Without Pro, retain per-record triggers or use ordinary application batching where appropriate. Do not recommend buying Pro or enabling `pro?` without checking the project's installed dependencies and requirements. Verify the exact DSL against [chunk options](https://ash-oban.hexdocs.pm/dsl-ashoban.html#oban-triggers-trigger-chunks).
 

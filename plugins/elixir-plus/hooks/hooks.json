@@ -18,12 +18,12 @@
           {
             "type": "command",
             "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" format-elixir.sh",
-            "timeout": 15000
+            "timeout": 15
           },
           {
             "type": "command",
             "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" compile-elixir.sh",
-            "timeout": 60000
+            "timeout": 60
           }
         ]
       }
@@ -35,7 +35,7 @@
           {
             "type": "command",
             "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" error-critic.sh",
-            "timeout": 10000
+            "timeout": 10
           }
         ]
       }
@@ -47,7 +47,7 @@
           {
             "type": "command",
             "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" block-dangerous-ops.sh",
-            "timeout": 10000
+            "timeout": 10
           }
         ]
       },
@@ -57,7 +57,7 @@
           {
             "type": "command",
             "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd\" credo-elixir.sh",
-            "timeout": 30000
+            "timeout": 30
           }
         ]
       }

@@ -21,12 +21,12 @@ bdo() { printf '{"tool_name":"Bash","tool_input":{"command":%s}}' "$(jq -Rn --ar
 assert_deny() {
   local out; out=$(bdo "$1")
   local decision; decision=$(printf '%s' "$out" | jq -r '.hookSpecificOutput.permissionDecision // "none"' 2>/dev/null)
-  if [ "$decision" = "deny" ]; then report ok "deny: $1"; else report fail "deny: $1" "expected deny, got '$decision'"; fi
+  if [ "$decision" = "deny" ]; then report ok "deny: $(printf %s "$1" | tr "\n" " ")"; else report fail "deny: $(printf %s "$1" | tr "\n" " ")" "expected deny, got '$decision'"; fi
 }
 
 assert_allow() {
   local out; out=$(bdo "$1")
-  if [ -z "$out" ]; then report ok "allow: $1"; else report fail "allow: $1" "expected no output, got: $out"; fi
+  if [ -z "$out" ]; then report ok "allow: $(printf %s "$1" | tr "\n" " ")"; else report fail "allow: $(printf %s "$1" | tr "\n" " ")" "expected no output, got: $out"; fi
 }
 
 echo "block-dangerous-ops"
@@ -51,6 +51,25 @@ assert_allow 'grep -f patterns.txt lib/ && git push origin main'
 assert_allow 'tar -xzf release.tar.gz'
 assert_allow 'echo "do not run mix ecto.drop"'
 
+# Wrapper forms must NOT evade the gate (review finding #1).
+assert_deny  'bash -c "mix ecto.drop"'
+assert_deny  "sh -c 'mix ecto.reset'"
+assert_deny  'eval "mix ecto.drop"'
+assert_deny  '(mix ecto.drop)'
+assert_deny  'bash -lc "MIX_ENV=prod mix release"'
+# Non-flag force-push forms (review finding #4).
+assert_deny  'git push origin +main'
+assert_deny  'git -c core.pager=cat push --force'
+assert_deny  'git push --mirror origin'
+# Newline is a separator, not a joiner (review finding #2/#3).
+assert_allow 'git push origin main
+rm -f foo.txt'
+assert_allow 'grep -f patterns.txt lib/
+git push origin main'
+assert_deny  'echo ok
+mix ecto.drop'
+assert_allow 'printf "%s" "mix ecto.reset"'
+
 # --- error-critic -----------------------------------------------------------
 echo "error-critic"
 STATE=$(mktemp -d)
@@ -71,7 +90,7 @@ out2=$(ec 'mix test' 'undefined function foo/1' s1)
 out3=$(ec 'mix test' 'undefined function foo/1' s1)
 ctx=$(printf '%s' "$out3" | jq -r '.hookSpecificOutput.additionalContext // ""' 2>/dev/null)
 [ -n "$ctx" ] && report ok "3rd identical failure escalates" || report fail "3rd identical failure escalates" "no additionalContext in: $out3"
-case "$ctx" in *"failure #3"*) report ok "escalation names the attempt count" ;;
+case "$ctx" in *"3 failures of the SAME"*) report ok "escalation names the attempt count" ;;
   *) report fail "escalation names the attempt count" "context: $ctx" ;; esac
 case "$ctx" in *"STOP retrying"*) report ok "escalation says stop" ;;
   *) report fail "escalation says stop" "context: $ctx" ;; esac
@@ -140,6 +159,69 @@ else
   report ok "never writes state into the project dir"
 fi
 rm -rf "$PROJ"
+
+# Distinct files must not collapse into one signature (review finding #5).
+edit_fail() { # $1 file, $2 error, $3 session
+  printf '{"session_id":%s,"scratchpad_dir":%s,"tool_name":"Edit","tool_input":{"file_path":%s},"error":%s}' \
+    "$(jq -Rn --arg s "$3" '$s')" "$(jq -Rn --arg d "$STATE" '$d')" \
+    "$(jq -Rn --arg f "$1" '$f')" "$(jq -Rn --arg m "$2" '$m')" \
+    | "$HOOKS/error-critic.sh" 2>/dev/null
+}
+edit_fail '/proj/lib/a/user.ex' 'undefined variable' f1 >/dev/null
+edit_fail '/proj/lib/b/user.ex' 'undefined variable' f1 >/dev/null
+out_files=$(edit_fail '/proj/lib/c/user.ex' 'undefined variable' f1)
+[ -z "$out_files" ] && report ok "different files stay distinct signatures" \
+  || report fail "different files stay distinct signatures" "escalated across 3 different files"
+
+# Same file, repeated: still collapses and escalates.
+edit_fail '/proj/lib/a/order.ex' 'undefined variable' f2 >/dev/null
+edit_fail '/proj/lib/a/order.ex' 'undefined variable' f2 >/dev/null
+out_same=$(edit_fail '/proj/lib/a/order.ex' 'undefined variable' f2)
+[ -n "$out_same" ] && report ok "same file repeated still escalates" \
+  || report fail "same file repeated still escalates" "no escalation"
+
+# User interruptions must not count (review finding #6).
+interrupt() {
+  printf '{"session_id":"i1","scratchpad_dir":%s,"tool_name":"Bash","tool_input":{"command":"mix test"},"error":"The user doesn'"'"'t want to proceed with this tool use","is_interrupt":true}' \
+    "$(jq -Rn --arg d "$STATE" '$d')" | "$HOOKS/error-critic.sh" 2>/dev/null
+}
+interrupt >/dev/null; interrupt >/dev/null
+[ -z "$(interrupt)" ] && report ok "interrupts do not count toward threshold" \
+  || report fail "interrupts do not count toward threshold" "escalated on user interrupt"
+
+# Counter resets after escalating (review finding #10).
+ec 'mix dialyzer' 'boom' rst >/dev/null
+ec 'mix dialyzer' 'boom' rst >/dev/null
+ec 'mix dialyzer' 'boom' rst >/dev/null   # escalates
+out_after=$(ec 'mix dialyzer' 'boom' rst)
+[ -z "$out_after" ] && report ok "counter resets after escalation" \
+  || report fail "counter resets after escalation" "re-fired immediately: $out_after"
+
+# Path traversal in session_id must not escape the state root (review #11).
+TRAV=$(mktemp -d)
+printf '{"session_id":"../../pwned","scratchpad_dir":%s,"tool_name":"Bash","tool_input":{"command":"x"},"error":"e"}' \
+  "$(jq -Rn --arg d "$TRAV/root" '$d')" | "$HOOKS/error-critic.sh" >/dev/null 2>&1
+if [ -d "$TRAV/pwned" ] || [ -d "$TRAV/root/../../pwned" ] 2>/dev/null; then
+  report fail "session_id cannot traverse out of state dir" "created a dir outside the root"
+else
+  report ok "session_id cannot traverse out of state dir"
+fi
+rm -rf "$TRAV"
+
+# --- hooks.json contract ----------------------------------------------------
+HJ="$HOOKS/hooks.json"
+if jq -e . "$HJ" >/dev/null 2>&1; then report ok "hooks.json is valid JSON"; else report fail "hooks.json is valid JSON" "jq rejected it"; fi
+# Claude Code hook timeouts are in SECONDS; a millisecond value would be hours.
+bad_to=$(jq '[.hooks[][].hooks[].timeout // 0] | map(select(. > 300)) | length' "$HJ" 2>/dev/null)
+[ "$bad_to" = "0" ] && report ok "hook timeouts are plausible seconds, not ms" \
+  || report fail "hook timeouts are plausible seconds, not ms" "$bad_to entries exceed 300"
+# Every referenced script exists and is executable.
+missing=0
+for sc in $(jq -r '.hooks[][].hooks[].command' "$HJ" 2>/dev/null | sed 's/.*run-hook.cmd" //; s/"//g'); do
+  [ -x "$HOOKS/$sc" ] || { missing=$((missing+1)); echo "     missing: $sc"; }
+done
+[ "$missing" -eq 0 ] && report ok "all hooks.json scripts exist and are executable" \
+  || report fail "all hooks.json scripts exist and are executable" "$missing missing"
 
 # --- fail-open contract -----------------------------------------------------
 echo "fail-open"

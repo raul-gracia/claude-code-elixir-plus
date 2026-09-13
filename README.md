@@ -43,7 +43,7 @@ Six hooks run automatically -- no configuration needed after install.
 | `format-elixir.sh` | `PostToolUse` (Edit/Write) | After any file edit or write | Runs `mix format` on the changed `.ex`/`.exs` file | 15s |
 | `compile-elixir.sh` | `PostToolUse` (Edit/Write) | After any file edit or write | Runs `mix compile --warnings-as-errors` on changed `.ex` files (skips `.exs`) | 60s |
 | `credo-elixir.sh` | `PreToolUse` (Commit) | Before a git commit | Runs `mix credo` on the file; blocks commit if issues found | 30s |
-| `block-dangerous-ops.sh` | `PreToolUse` (Bash) | Before any shell command | Denies `mix ecto.drop`/`ecto.reset`, `MIX_ENV=prod`, and `git push --force` | 10s |
+| `block-dangerous-ops.sh` | `PreToolUse` (Bash) | Before any shell command | Denies `mix ecto.drop`/`ecto.reset`, `MIX_ENV=prod`, and force pushes | 10s |
 | `error-critic.sh` | `PostToolUseFailure` (Bash/Edit/Write) | After a tool call fails | Counts identical failures; on the 3rd, injects the attempt history and tells the model to stop and escalate | 10s |
 
 The first four hooks walk up from the edited file to find `mix.exs`, so they work in umbrella apps and nested project structures. The credo hook silently skips if credo is not installed in the project.
@@ -52,9 +52,27 @@ The first four hooks walk up from the edited file to find `mix.exs`, so they wor
 
 `block-dangerous-ops` and `error-critic` exist because prose rules in `CLAUDE.md` fire unreliably -- a shell script on a hook event always runs. Both are adapted from the enforcement-hook design in [oliver-kriska/claude-elixir-phoenix](https://github.com/oliver-kriska/claude-elixir-phoenix).
 
-**`block-dangerous-ops`** splits the command on `&&`, `||`, `;` and `|` and tests each segment independently, so a flag in one segment is never attributed to a command in another (`grep -f pats.txt && git push` is not a force push). `--force-with-lease` stays allowed; `mix ecto.rollback` stays allowed. The deny is returned as a `permissionDecision`, and it holds even under `--permission-mode bypassPermissions`.
+**`block-dangerous-ops`** splits the command on `&&`, `||`, `;`, `|` **and newline**, then tests each segment independently, so a flag in one segment is never attributed to a command in another (`grep -f pats.txt && git push` is not a force push). Quotes, parens and backticks are flattened before matching, so wrapper forms do not evade the gate:
 
-**`error-critic`** hashes a normalised signature of each failure (lowercased, absolute paths stripped, digits collapsed) so the same error at shifting line numbers counts as one repeat rather than three distinct ones. State is per-session and lives in the session scratchpad or `$TMPDIR` -- never in the project directory. Threshold defaults to 3 and is configurable:
+```
+bash -c "mix ecto.drop"              -> denied
+eval 'mix ecto.reset'                -> denied
+(mix ecto.drop)                      -> denied
+git push origin +main               -> denied   (a +refspec is a force push)
+git -c core.pager=cat push --force  -> denied
+
+mix ecto.rollback --step 1           -> allowed
+git push --force-with-lease   -> allowed
+echo "mix ecto.drop"                 -> allowed  (output builtins are skipped)
+```
+
+Splitting uses `tr`, not `sed` with a `\n` replacement, because BSD sed (macOS) emits a literal `n` there and would not split at all. The deny is returned as a `permissionDecision`, and it holds even under `--permission-mode bypassPermissions`.
+
+**`error-critic`** hashes a normalised signature of each failure (lowercased, directory prefix dropped but the last two path segments kept, digits collapsed) so the same error at shifting line numbers counts as one repeat -- while `lib/a/user.ex` and `lib/b/user.ex` stay distinct, since fixing one error across several modules is normal work, not a retry loop.
+
+User interruptions and tool rejections are skipped (`is_interrupt`), so pressing Esc three times is not reported back to the model as its own failure loop. After escalating, the counter resets, so the warning does not re-fire on every later attempt once you have said "keep going".
+
+State is per-session, keyed by a sanitised `session_id`, and lives in the session scratchpad or a `0700` dir under `$XDG_STATE_HOME`/`$HOME` -- never in the project directory, and never at a world-predictable `/tmp` path. The read-modify-write is guarded by a `mkdir` lock so parallel tool calls cannot lose an increment. Threshold defaults to 3 and is configurable:
 
 ```bash
 export ELIXIR_PLUS_ERROR_CRITIC_THRESHOLD=2
@@ -68,7 +86,9 @@ Both scripts are deliberately **fail-open**: no `set -e`, every error path exits
 tests/hooks/run.sh
 ```
 
-39 assertions covering deny/allow cases, failure-signature collapsing, session isolation, and the fail-open contract on malformed input.
+59 assertions covering deny/allow cases (including wrapper-bypass and multi-line forms), failure-signature collapsing, session isolation, path traversal, interrupt handling, the `hooks.json` contract, and the fail-open guarantee on malformed input.
+
+Note on `hooks.json`: Claude Code hook `timeout` values are in **seconds**, not milliseconds. The suite asserts no timeout exceeds 300, because a millisecond-style `10000` would let a stalled hook hold up a tool call for nearly three hours.
 
 ## LSP
 

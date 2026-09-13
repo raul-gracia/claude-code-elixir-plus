@@ -35,7 +35,7 @@ Earlier versions shipped seven "thinking" skills and a router. The current entry
 
 ## Hooks
 
-Four hooks run automatically -- no configuration needed after install.
+Six hooks run automatically -- no configuration needed after install.
 
 | Hook | Event | Fires When | What It Does | Timeout |
 |------|-------|------------|-------------|---------|
@@ -43,8 +43,32 @@ Four hooks run automatically -- no configuration needed after install.
 | `format-elixir.sh` | `PostToolUse` (Edit/Write) | After any file edit or write | Runs `mix format` on the changed `.ex`/`.exs` file | 15s |
 | `compile-elixir.sh` | `PostToolUse` (Edit/Write) | After any file edit or write | Runs `mix compile --warnings-as-errors` on changed `.ex` files (skips `.exs`) | 60s |
 | `credo-elixir.sh` | `PreToolUse` (Commit) | Before a git commit | Runs `mix credo` on the file; blocks commit if issues found | 30s |
+| `block-dangerous-ops.sh` | `PreToolUse` (Bash) | Before any shell command | Denies `mix ecto.drop`/`ecto.reset`, `MIX_ENV=prod`, and `git push --force` | 10s |
+| `error-critic.sh` | `PostToolUseFailure` (Bash/Edit/Write) | After a tool call fails | Counts identical failures; on the 3rd, injects the attempt history and tells the model to stop and escalate | 10s |
 
-All hooks walk up from the edited file to find `mix.exs`, so they work in umbrella apps and nested project structures. The credo hook silently skips if credo is not installed in the project.
+The first four hooks walk up from the edited file to find `mix.exs`, so they work in umbrella apps and nested project structures. The credo hook silently skips if credo is not installed in the project.
+
+### Guardrail hooks
+
+`block-dangerous-ops` and `error-critic` exist because prose rules in `CLAUDE.md` fire unreliably -- a shell script on a hook event always runs. Both are adapted from the enforcement-hook design in [oliver-kriska/claude-elixir-phoenix](https://github.com/oliver-kriska/claude-elixir-phoenix).
+
+**`block-dangerous-ops`** splits the command on `&&`, `||`, `;` and `|` and tests each segment independently, so a flag in one segment is never attributed to a command in another (`grep -f pats.txt && git push` is not a force push). `--force-with-lease` stays allowed; `mix ecto.rollback` stays allowed. The deny is returned as a `permissionDecision`, and it holds even under `--permission-mode bypassPermissions`.
+
+**`error-critic`** hashes a normalised signature of each failure (lowercased, absolute paths stripped, digits collapsed) so the same error at shifting line numbers counts as one repeat rather than three distinct ones. State is per-session and lives in the session scratchpad or `$TMPDIR` -- never in the project directory. Threshold defaults to 3 and is configurable:
+
+```bash
+export ELIXIR_PLUS_ERROR_CRITIC_THRESHOLD=2
+```
+
+Both scripts are deliberately **fail-open**: no `set -e`, every error path exits 0. A broken guardrail hook must never wedge a session. Denials are expressed as JSON data rather than exit codes.
+
+### Testing the hooks
+
+```bash
+tests/hooks/run.sh
+```
+
+39 assertions covering deny/allow cases, failure-signature collapsing, session isolation, and the fail-open contract on malformed input.
 
 ## LSP
 

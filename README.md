@@ -1,8 +1,8 @@
 # claude-code-elixir-plus
 
-A Claude Code plugin that grants Claude runtime capabilities for Elixir, Phoenix, Ecto, OTP, Oban, and Ash work. It bundles one capability skill (`elixir-runtime`), four automated hooks (format, compile, credo, session context injection), and ElixirLS integration.
+A Claude Code plugin that grants Claude runtime capabilities for Elixir, Phoenix, Ecto, OTP, Oban, and Ash work. It bundles two skills — the `elixir-runtime` capability grant and the `elixir-audit` workflow — four automated hooks (format, compile, credo, session context injection), and ElixirLS integration.
 
-The skill provides runtime introspection and directs Ash work to documentation for the application's installed versions. General framework tutorials stay upstream. An optional AshOban reference covers workflow decisions and version-sensitive operational behavior, while the existing Oban Pro reference supplies details for the commercial library.
+The `elixir-runtime` skill provides runtime introspection and directs Ash work to documentation for the application's installed versions. General framework tutorials stay upstream. An optional AshOban reference covers workflow decisions and version-sensitive operational behavior, while the existing Oban Pro reference supplies details for the commercial library.
 
 ## Installation
 
@@ -14,13 +14,14 @@ claude plugin add claude-code-elixir-plus
 claude plugin install /path/to/claude-code-elixir-plus
 ```
 
-## Skill
+## Skills
 
-The plugin ships one capability skill, `elixir-runtime`, for Elixir/Phoenix projects and explicit Ash/AshOban tasks. Its description supports native selection; the session hook injects it when `mix.exs` exists in the working directory.
+The plugin ships two skills. `elixir-runtime` is a capability grant for Elixir/Phoenix projects and explicit Ash/AshOban tasks; its description supports native selection, and the session hook injects it when `mix.exs` exists in the working directory. `elixir-audit` is a workflow you invoke explicitly.
 
 | Skill | Triggers When You... | Grants |
 |-------|---------------------|--------|
 | `elixir-runtime` | Work on Elixir/Phoenix projects or Ash resources, policies and background workflows | Tidewave introspection, installed-version documentation routing, optional AshOban workflow guidance and an Oban Pro reference. |
+| `elixir-audit` | Run `/elixir-audit`, or `/elixir-audit lib/my_app/accounts` for a targeted pass | Full or targeted codebase audit: architecture and context boundaries, the official Elixir anti-patterns, OTP and process design, Ecto queries/indexes/migrations, security, ExUnit posture, and LiveView or Ash sections gated on stack detection from `mix.exs`. Optional ExCoveralls, Credo/Dialyzer and Sobelow subagents add measured data, run inside a disposable git worktree so the audited repo is never modified. Orientation mode produces private onboarding notes; review mode produces `ELIXIR_AUDIT_REPORT.md`. |
 
 ### Reference files
 
@@ -29,10 +30,14 @@ The plugin ships one capability skill, `elixir-runtime`, for Elixir/Phoenix proj
 | `elixir-runtime/references/oban-pro.md` | `elixir-runtime` | Oban Pro (workflows, grafts, cascades, batches) is commercial/closed-source and under-represented in training data. |
 | `elixir-runtime/references/performance.md` | `elixir-runtime` | Measured request-path performance traps for Bandit/Plug, SQLite and websocket fan-out on OTP 28+, plus how to profile a release. |
 | `elixir-runtime/references/ash-oban.md` | `elixir-runtime` | Conditional guidance for Ash background work, including domain state, reconciliation, identity and version-sensitive scheduling. |
+| `elixir-audit/references/*.md` (9 files) | `elixir-audit` | Audit checklists loaded on demand by detected stack: anti-patterns, OTP design, Ecto, Phoenix, LiveView, Ash, security, testing, tooling. |
+| `elixir-audit/agents/*.md` (3 files) | `elixir-audit` | Subagent specs for the ExCoveralls, Credo/Dialyzer and Sobelow metric passes. |
 
-### Why one thin skill
+### Why these two, and nothing else
 
 Earlier versions shipped seven "thinking" skills and a router. The current entrypoint stays small and loads detailed references when a task needs them. Ash background work gets a focused review procedure, with verified version facts and concrete revisit conditions; ordinary Phoenix work does not load it. The [current evaluation procedure](evals/ash-workflows/README.md) measures the resulting decisions and distinguishes reasoning evidence from application execution tests.
+
+`elixir-audit` earns its place on different grounds: it is a workflow, not pedagogy. Knowing what an N+1 is does not produce a consistent audit; the skill supplies the execution order, the stack-gated checklists, the subagent specs, and the report shape, so the same repo gets the same passes every time.
 
 ## Hooks
 

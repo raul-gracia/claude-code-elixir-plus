@@ -4,9 +4,16 @@ Agent-facing guide for working in this repo. README.md is user-facing; this file
 
 ## What this repo is
 
-A Claude Code plugin marketplace publishing one plugin (`elixir-plus`) with one capability skill (`elixir-runtime`), four hooks, and ElixirLS integration for Elixir/Phoenix/Ash work. Auto-installed via `claude plugins install elixir-plus@claude-code-elixir-plus`. Sister repo: `claude-code-raul-skills` (everything non-Elixir) at `~/Code/claude-code-raul-skills/`.
+A Claude Code plugin marketplace publishing one plugin (`elixir-plus`) with two skills (`elixir-runtime`, `elixir-audit`), four hooks, and ElixirLS integration for Elixir/Phoenix/Ash work. Auto-installed via `claude plugins install elixir-plus@claude-code-elixir-plus`. Sister repo: `claude-code-raul-skills` (everything non-Elixir) at `~/Code/claude-code-raul-skills/`.
 
-Scope is strictly the Elixir ecosystem. Keep the capability entrypoint small, route framework details to installed-version documentation, and load specialized references only when relevant. The approved AshOban workflow procedure covers domain-state recovery and execution identity alongside versioned operational facts; it has behavioral evaluations under `evals/ash-workflows/`. Broader work such as Ruby, fullstack or deployment belongs in the sister repo.
+Scope is strictly the Elixir ecosystem, and deliberately thin. General Elixir/OTP/Phoenix/Ecto/Ash pedagogy lives in the model's training data, so this plugin does not restate it. Two things do earn a place here:
+
+1. **Durable non-training-data payload** — the Tidewave MCP runtime grant, the closed-source Oban Pro reference, the AshOban workflow procedure (domain-state recovery, execution identity, versioned operational facts; behavioral evaluations under `evals/ash-workflows/`), and version-gated facts (each with a sunset note). Keep the capability entrypoint small, route framework details to installed-version documentation, and load specialized references only when relevant. This is `elixir-runtime`.
+2. **Repeatable workflows** — a defined execution order, stack-gated checklists, subagent specs, and an output shape, so the same task produces the same passes every time. Knowing the material is not the same as running a consistent procedure over it. This is `elixir-audit`.
+
+A new skill must clear one of those two bars. Restating what the model already knows clears neither.
+
+Anything broader (Ruby, fullstack, deployment via Kamal, infra, business strategy) goes in the sister repo. Elixir-specific skills live here even when a same-shaped sibling exists there — `elixir-audit` mirrors the sister repo's `rg-rails-audit` in structure, but the language rule wins over the family rule.
 
 ## Repo layout
 
@@ -61,6 +68,8 @@ One capability skill: `elixir-runtime`. It is auto-injected via the `SessionStar
 
 Keep general Elixir/OTP/Phoenix/Ecto/Ash tutorials upstream. The AshOban reference is the specifically approved workflow scope from DC-198; preserve contextual choices such as ordinary workers for temporary imports. New guidance must justify its context cost with a capability, a verified compatibility issue or evaluated behavior. Retain source versions and concrete revisit conditions for operational facts.
 
+One workflow skill: `elixir-audit`. It is invoked explicitly (`/elixir-audit`, optionally with a path for a targeted pass) and is never injected by a hook. `SKILL.md` holds the execution order and output shape; `references/*.md` hold stack-gated checklists loaded only when `mix.exs` shows the matching dependency; `agents/*.md` are subagent specs for the measured ExCoveralls, Credo/Dialyzer and Sobelow passes, which run in a disposable git worktree so the audited repo is never modified. Keep it a procedure: new content must change what the audit does or reports, not restate framework knowledge.
+
 Reference docs live in `skills/<skill>/references/*.md` and are linked from `SKILL.md` for conditional loading. The current references are `ash-oban.md`, `oban-pro.md` and `performance.md`; keep Pro chunk mechanics in `oban-pro.md`. `performance.md` holds only measured findings with their source and revisit conditions.
 
 ## Hooks
@@ -89,7 +98,7 @@ Requires `elixir-ls` on PATH. The plugin does not bundle the binary.
 
 ## Adding a new skill
 
-Only add a skill if it carries durable non-training-data payload (a capability/tool grant, a closed-source library reference, or a version fact with a sunset note) — NOT general pedagogy the model already knows.
+Only add a skill if it clears one of the two bars in "What this repo is": durable non-training-data payload (a capability/tool grant, a closed-source library reference, or a version fact with a sunset note) or a repeatable workflow (defined execution order, checklists, subagent specs, output shape) — NOT general pedagogy the model already knows.
 
 1. `mkdir plugins/elixir-plus/skills/<name>/` (no `rg-` prefix)
 2. Write `SKILL.md` with frontmatter:

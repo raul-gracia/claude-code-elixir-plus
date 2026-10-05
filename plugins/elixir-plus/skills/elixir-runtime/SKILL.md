@@ -37,6 +37,10 @@ Without a running app, read resource source and versioned upstream docs. If depe
 
 For background work on Ash resources, read [references/ash-oban.md](references/ash-oban.md). It covers state ownership, reconciliation, execution identity and version-sensitive scheduling behavior. Ordinary Elixir or Phoenix work does not need that reference. Discover other Ash extensions through the project's dependencies and current upstream documentation when the task requires them.
 
+## Testing
+
+After a test command fails, inspect the failure before invoking the identical command again. Do not rerun an unchanged failing command unless relevant source/test/config files changed or the run is explicitly checking flakiness. During a fix, use the narrowest file or line test; run the project baseline once after focused tests pass, then once more only if the baseline itself caused a code change.
+
 ## Version facts
 
 Sunset annotations mark facts to delete once frontier models train past the release.

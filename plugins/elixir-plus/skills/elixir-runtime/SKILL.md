@@ -41,6 +41,10 @@ For background work on Ash resources, read [references/ash-oban.md](references/a
 
 After a test command fails, inspect the failure before invoking the identical command again. Do not rerun an unchanged failing command unless relevant source/test/config files changed or the run is explicitly checking flakiness. During a fix, use the narrowest file or line test; run the project baseline once after focused tests pass, then once more only if the baseline itself caused a code change.
 
+## Headless command preflight
+
+`rg` already skips gitignored `deps/` and `_build/`; pass no exclusions. `:!path/**` is git pathspec syntax and makes rg error on a missing path. To search inside a dependency, first check that `deps/<name>` exists (fresh worktrees may not have run `mix deps.get`), and if it doesn't, report it rather than guessing paths. Before a DB-backed `mix test` in a headless/sandboxed run, if any command reports `:eperm`, `not owner`, or a Postgrex connection failure to localhost, stop DB-backed test attempts for that run, report them as unverified, and continue only with checks that do not need the database (e.g. `mix compile --warnings-as-errors`, `mix format --check-formatted`).
+
 ## Version facts
 
 Sunset annotations mark facts to delete once frontier models train past the release.

@@ -1,6 +1,6 @@
 {
   "name": "elixir-plus",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "Elixir/Phoenix runtime capability skill with Tidewave introspection, version-aware Ash/AshOban guidance and an Oban Pro reference.",
   "author": {
     "name": "Raul Gracia",

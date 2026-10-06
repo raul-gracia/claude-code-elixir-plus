@@ -61,7 +61,7 @@ One capability skill: `elixir-runtime`. It is auto-injected via the `SessionStar
 
 Keep general Elixir/OTP/Phoenix/Ecto/Ash tutorials upstream. The AshOban reference is the specifically approved workflow scope from DC-198; preserve contextual choices such as ordinary workers for temporary imports. New guidance must justify its context cost with a capability, a verified compatibility issue or evaluated behavior. Retain source versions and concrete revisit conditions for operational facts.
 
-Reference docs live in `skills/<skill>/references/*.md` and are linked from `SKILL.md` for conditional loading. The current references are `ash-oban.md` and `oban-pro.md`; keep Pro chunk mechanics in the latter.
+Reference docs live in `skills/<skill>/references/*.md` and are linked from `SKILL.md` for conditional loading. The current references are `ash-oban.md`, `oban-pro.md` and `performance.md`; keep Pro chunk mechanics in `oban-pro.md`. `performance.md` holds only measured findings with their source and revisit conditions.
 
 ## Hooks
 

@@ -27,6 +27,7 @@ The plugin ships one capability skill, `elixir-runtime`, for Elixir/Phoenix proj
 | File | Skill | Why it's here |
 |------|-------|---------------|
 | `elixir-runtime/references/oban-pro.md` | `elixir-runtime` | Oban Pro (workflows, grafts, cascades, batches) is commercial/closed-source and under-represented in training data. |
+| `elixir-runtime/references/performance.md` | `elixir-runtime` | Measured request-path performance traps for Bandit/Plug, SQLite and websocket fan-out on OTP 28+, plus how to profile a release. |
 | `elixir-runtime/references/ash-oban.md` | `elixir-runtime` | Conditional guidance for Ash background work, including domain state, reconciliation, identity and version-sensitive scheduling. |
 
 ### Why one thin skill

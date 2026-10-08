@@ -6,10 +6,10 @@
 
 Audit procedure:
 1. List every `handle_event/3` clause that acts on an id or mutates state.
-2. For each, confirm it re-derives authorization from `socket.assigns.current_user` and the target record — not from the payload alone.
+2. For each, confirm it re-derives authorization from the actor in assigns (`socket.assigns.current_scope` on Phoenix 1.8+ `phx.gen.auth`, `socket.assigns.current_user` on older apps) and the target record — not from the payload alone.
 3. Flag any that scope only by the param.
 
-The idiomatic fix is scoping every lookup by the actor (`Blog.get_post!(current_user, id)`), so the query itself cannot return another user's record.
+The idiomatic fix is scoping every lookup by the actor (`Blog.get_post!(socket.assigns.current_scope, id)`, or `current_user` on older apps), so the query itself cannot return another user's record.
 
 Also check:
 - `on_mount` hooks (`Phoenix.LiveView.on_mount/1`) used for shared session/auth rather than repeating it in each `mount`
@@ -31,7 +31,7 @@ Every connected client holds its own process and assigns. A 500-row list in assi
 
 - Work in `render/1` beyond composing markup — DB calls, `Enum.sort` over a large list, date formatting of every row. `render` runs on every state change.
 - Change tracking is per-assign. Assigning a whole map when one field changed re-renders everything that touches it.
-- `assign_new/3` for values that should not be recomputed on reconnect.
+- `assign_new/3` to reuse an assign already set by the plug pipeline (disconnected render) or a parent LiveView (connected) instead of loading it again. It does not survive a reconnect: that is a fresh mount, and the function runs again.
 - Function components (`attr`/`slot` declared) instead of nested `<%= if %>` blocks.
 - `phx-update="stream"` used with streams; manual DOM manipulation fighting LiveView.
 

@@ -17,7 +17,7 @@ Walk `router.ex` top to bottom and build a table of scope → pipeline → auth 
 
 - Scopes missing their auth pipeline
 - Pipelines defined but never used
-- `live_dashboard`, `Swoosh.MailboxPreview`, `Plug.Telemetry` dev routes reachable in prod (check the `if Application.compile_env(:my_app, :dev_routes)` guard exists)
+- `live_dashboard` and `Plug.Swoosh.MailboxPreview` dev routes reachable in prod (check the `if Application.compile_env(:my_app, :dev_routes)` guard exists)
 - Catch-all routes shadowing later ones
 - Non-RESTful actions accumulating on a controller — often a missing resource
 - `forward` to plugs without their own auth

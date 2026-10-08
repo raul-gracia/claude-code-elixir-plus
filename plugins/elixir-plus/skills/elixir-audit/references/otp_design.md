@@ -54,7 +54,7 @@ For each GenServer, answer these:
 ## Oban (if present)
 
 - **Idempotency** — jobs retry. Any job performing a non-idempotent side effect (charging a card, sending an email) needs a guard.
-- **`unique`** — prevents duplicate enqueues; check it is set where duplicates are harmful, and that the `period` matches reality.
+- **`unique`** — prevents duplicate enqueues within its `period`; check it is set where duplicate enqueues are wasteful and that the period matches reality. It does not stop a job's own retries or make a non-idempotent side effect safe, so never accept it as the fix for the idempotency item above.
 - **`max_attempts`** — default 20. For a job that will never succeed on retry (bad input), that is 20 wasted runs; return `{:cancel, reason}`.
 - **Long jobs** — a job running for minutes occupies a queue slot. Check queue concurrency against job duration.
 - **Queue isolation** — slow jobs and latency-sensitive jobs in the same queue means the latter waits.

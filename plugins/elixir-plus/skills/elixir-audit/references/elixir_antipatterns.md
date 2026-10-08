@@ -26,7 +26,7 @@ Function heads that both pattern-match many fields and bind them, where only som
 
 ### Dynamic atom creation
 `String.to_atom/1` (or `binary_to_atom`) on values derived from user input, HTTP params, external APIs, or file contents. Atoms are never garbage-collected; the table has a hard limit (default ~1M) and exhausting it crashes the VM.
-**Detect**: grep `String.to_atom`, `List.to_atom`, `:erlang.binary_to_atom`, and trace every argument to its source.
+**Detect**: grep `String.to_atom`, `List.to_atom`, `:erlang.binary_to_atom`, and `keys: :atoms` passed to `Jason.decode`/`decode!` (atomizes every key; `keys: :atoms!` does not create atoms), and trace every argument to its source.
 **Fix**: `String.to_existing_atom/1` inside a `rescue ArgumentError`, or keep the value as a string, or match against an explicit allowlist.
 **Severity**: **Critical** when reachable from user input — it is a remote denial of service.
 
@@ -59,6 +59,12 @@ Writing code that silently tolerates unexpected shapes: `case` with a catch-all 
 **Detect**: boolean operators applied to results of functions returning `boolean()`.
 **Fix**: `and`, `or`, `not`.
 **Severity**: Low
+
+### Structs with 32 fields or more
+At 32 fields or more the VM stops storing a struct as a flat map and switches to a hash map, which costs memory and sharing across instances.
+**Detect**: `defstruct` (or `embedded_schema`/`schema`) with 32+ fields.
+**Fix**: nest optional or related fields into a sub-struct or metadata map; weigh against API ergonomics.
+**Severity**: Low, Medium for structs held in large numbers in memory.
 
 ---
 
@@ -149,3 +155,15 @@ A macro where a function would work — i.e. the macro does not need to manipula
 **Detect**: `defmacro` whose body only interpolates its arguments into a call.
 **Fix**: make it a function.
 **Severity**: Medium
+
+### `use` instead of `import`
+A library or internal module offering `use` (a `__using__/1` that injects code) where `import` or `alias` would do, so a reader cannot see what the call site gains without reading the macro.
+**Detect**: `defmacro __using__` whose `quote` only contains `import`/`alias`/`require`.
+**Fix**: have callers `import`/`alias` directly; if `use` is needed, document what it injects in the moduledoc.
+**Severity**: Low
+
+### Untracked compile-time dependencies
+Module names built at compile time with `Module.concat/1,2` or literal atoms (`:"Elixir.MyApp.Foo"`), which the compiler cannot track, so dependents are not recompiled when the target changes.
+**Detect**: `Module.concat` or `:"Elixir.` in module bodies, module attributes, or macros.
+**Fix**: reference modules by their full alias; when names must be generated, generate them inside `quote`/`unquote` so the dependency is visible.
+**Severity**: Medium — stale builds that only a clean compile fixes.

@@ -21,7 +21,7 @@ The plugin ships two skills. `elixir-runtime` is a capability grant for Elixir/P
 | Skill | Triggers When You... | Grants |
 |-------|---------------------|--------|
 | `elixir-runtime` | Work on Elixir/Phoenix projects or Ash resources, policies and background workflows | Tidewave introspection, installed-version documentation routing, optional AshOban workflow guidance and an Oban Pro reference. |
-| `elixir-audit` | Run `/elixir-audit`, or `/elixir-audit lib/my_app/accounts` for a targeted pass | Full or targeted codebase audit: architecture and context boundaries, the official Elixir anti-patterns, OTP and process design, Ecto queries/indexes/migrations, security, ExUnit posture, and LiveView or Ash sections gated on stack detection from `mix.exs`. Optional ExCoveralls, Credo/Dialyzer and Sobelow subagents add measured data, run inside a disposable git worktree so the audited repo is never modified. Orientation mode produces private onboarding notes; review mode produces `ELIXIR_AUDIT_REPORT.md`. |
+| `elixir-audit` | Run `/elixir-audit`, or `/elixir-audit lib/my_app/accounts` for a targeted pass | Full or targeted codebase audit: architecture and context boundaries, the official Elixir anti-patterns, OTP and process design, Ecto queries/indexes/migrations, security, ExUnit posture, and LiveView or Ash sections gated on stack detection from `mix.lock` plus each app's `mix.exs`. Optional ExCoveralls, Credo/Dialyzer and Sobelow subagents add measured data, run inside a disposable git worktree so the audited repo is never modified. Orientation mode produces private onboarding notes; review mode produces `ELIXIR_AUDIT_REPORT.md`. |
 
 ### Reference files
 
@@ -30,7 +30,7 @@ The plugin ships two skills. `elixir-runtime` is a capability grant for Elixir/P
 | `elixir-runtime/references/oban-pro.md` | `elixir-runtime` | Oban Pro (workflows, grafts, cascades, batches) is commercial/closed-source and under-represented in training data. |
 | `elixir-runtime/references/performance.md` | `elixir-runtime` | Measured request-path performance traps for Bandit/Plug, SQLite and websocket fan-out on OTP 28+, plus how to profile a release. |
 | `elixir-runtime/references/ash-oban.md` | `elixir-runtime` | Conditional guidance for Ash background work, including domain state, reconciliation, identity and version-sensitive scheduling. |
-| `elixir-audit/references/*.md` (9 files) | `elixir-audit` | Audit checklists loaded on demand by detected stack: anti-patterns, OTP design, Ecto, Phoenix, LiveView, Ash, security, testing, tooling. |
+| `elixir-audit/references/*.md` (10 files) | `elixir-audit` | Audit checklists plus the report template: anti-patterns, OTP design, security, testing and tooling always load; Ecto, Phoenix, LiveView and Ash load by detected stack. |
 | `elixir-audit/agents/*.md` (3 files) | `elixir-audit` | Subagent specs for the ExCoveralls, Credo/Dialyzer and Sobelow metric passes. |
 
 ### Why these two, and nothing else

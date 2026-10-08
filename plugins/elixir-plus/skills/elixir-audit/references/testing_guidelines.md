@@ -3,7 +3,7 @@
 ## Coverage
 
 - Map each `lib/**/*.ex` to a `test/**/*_test.exs`. Modules with no test file at all are the first list.
-- Real numbers come from ExCoveralls (`mix coveralls` / `mix coveralls.html`). Line coverage in Elixir under-reports multi-clause functions, so treat a high number with suspicion and a low number as reliable.
+- Real numbers come from ExCoveralls (`mix coveralls` / `mix coveralls.html`). ExCoveralls measures lines, not branches: a line counts as covered once anything on it runs, so one-line `if`/`case`/`||` and multi-pattern guards hide untested branches. Coverage therefore over-reports — treat a high number with suspicion and a low number as reliable.
 - Coverage targets are only meaningful per layer. Expect: contexts/domain high, schemas moderate, web controllers moderate, `application.ex` and config near zero.
 - Zero-coverage modules that are *reachable in production* are the finding. Zero-coverage modules that are dead code are a different (also worth reporting) finding.
 

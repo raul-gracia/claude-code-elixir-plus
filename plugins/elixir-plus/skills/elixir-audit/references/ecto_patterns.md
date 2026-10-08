@@ -43,18 +43,18 @@ Walk `priv/repo/migrations/` and the schema modules together:
 - **Side effects inside a transaction**: sending email, HTTP calls, enqueueing jobs that read the not-yet-committed row. Move them after commit (or use `Oban` in the same transaction, which is the one case where enqueueing inside is correct).
 - Long transactions holding locks; `Repo.transaction` wrapping a whole request.
 - `Repo.transaction` return value ignored, or `{:error, failed_op, changeset, changes}` destructured without handling each failure op.
-- Nested transactions — Ecto uses savepoints; check the inner failure semantics are what the code expects.
+- Nested transactions — an inner `Repo.transaction`/`Repo.transact` simply runs inside the outer one (no savepoint), and an inner error or rollback aborts the whole outer transaction. Flag code that expects to recover from an inner failure and carry on.
 - `Repo.insert_all`/`update_all` for bulk work instead of a loop of single writes.
 
 ## Migrations
 
 - `references(..., on_delete: :nothing)` (the default) leaves orphans or blocks deletes. Every FK should state its intent.
-- `create index(..., concurrently: true)` requires **both** `@disable_ddl_transaction true` and `@disable_migration_lock true`. Without the first the statement cannot run at all; without the second Ecto still holds its migration advisory lock and the concurrent build blocks anyway.
+- `create index(..., concurrently: true)` needs `@disable_ddl_transaction true` — without it the statement cannot run inside the migration transaction. The default migration lock is `:table_lock`, which also defeats a concurrent build; the ecto_sql-recommended fix is `migration_lock: :pg_advisory_lock` in the repo config. `@disable_migration_lock true` in the migration is the alternative, but lets several nodes run the same migration at once. Finding: `concurrently` without `@disable_ddl_transaction`, or under `:table_lock` with neither the advisory lock nor `@disable_migration_lock`.
 - Adding a `NOT NULL` column with a default on a large table locks it (mitigated in PG11+, but check the PG version).
 - Data backfills in the same migration as the schema change — they run in one transaction and cannot be retried independently. Separate them.
 - Missing `down`/`change` reversibility on anything that might need rollback.
 - Migrations referencing schema modules (`MyApp.User`) — the module will drift from the migration's point in history. Use raw queries or `execute`.
-- `mix ecto.migrations` status vs what is in the repo: migrations present in the DB but missing from the codebase, or vice versa.
+- Migration history from source, not from a database: read `priv/repo/migrations/` (and `apps/*/priv/repo/migrations/` in an umbrella) for out-of-order or duplicate timestamps, migrations edited after they clearly shipped, and renamed or deleted files a deployed database may still record.
 
 ## Schemas
 

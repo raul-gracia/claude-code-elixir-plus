@@ -66,8 +66,8 @@ Ordered by how likely I am to hit them in week one.
 
 Things worth knowing, to bring up only if asked or if one blocks a task. Each has file:line so I can point at it if it comes up.
 
-| Severity | Finding | Location | Note |
-|---|---|---|---|
+| Severity | Finding | Location | Note | Fix |
+|---|---|---|---|---|
 
 ---
 
@@ -76,6 +76,16 @@ Things worth knowing, to bring up only if asked or if one blocks a task. Each ha
 Short list. Things the code cannot answer and that I should not guess at.
 
 1. {{...}}
+
+---
+
+## 6. How this audit was run
+
+- **Metrics**: {{coverage XX.X% (suite passed / N failures), Credo N issues, Dialyzer N findings, Sobelow N verified, N dependency CVEs — or "not collected"}}
+- **Tool failures**: {{tool — reason (environment limitation or finding)}}
+- **Code audited**: {{HEAD only; my working tree had uncommitted changes, so metrics describe committed code | HEAD, working tree clean}}
+- **Repo left untouched**: {{one of: working copy removed, `git status --porcelain` matches the baseline recorded before it was made | working copy removed, `git status --porcelain` differs from the baseline: <the diff> | Skip all — no copy made, no Mix run | not a git checkout — plain copy removed, no status baseline to compare}}
+- **Not covered**: {{paths not read, areas needing runtime access or production data}}
 ```
 
 ---
@@ -243,6 +253,11 @@ Note which Sobelow findings were manually verified and which were dismissed as f
 
 ---
 
+## Appendix: how this audit was run
+
+- **Code audited**: {{HEAD only; the working tree had uncommitted changes, so metrics describe committed code | HEAD, working tree clean}}
+- **Repo left untouched**: {{one of: working copy removed, `git status --porcelain` matches the baseline recorded before it was made | working copy removed, `git status --porcelain` differs from the baseline: <the diff> | Skip all — no copy made, no Mix run | not a git checkout — plain copy removed, no status baseline to compare}}
+
 ## Appendix: what was not covered
 
 {{Be explicit. Paths not read, tools that failed and why, areas needing runtime access or production data to assess. An audit that does not state its blind spots invites false confidence.}}
@@ -252,7 +267,7 @@ Note which Sobelow findings were manually verified and which were dismissed as f
 
 ## Rules for both variants
 
-- Every finding carries `file.ex:NN`. No location, no finding.
+- Every finding carries `file.ex:NN`. No location, no finding — except a project-level finding (e.g. "the suite does not run from a clean checkout"), which cites the command and its output instead.
 - "Why it matters **here**" must reference this codebase, not a general principle. If the consequence cannot be stated concretely, the finding is Low at best.
 - Show the fix as code, not prose, whenever the fix is under ~10 lines.
 - Do not pad the count. Twelve verified findings beat sixty unverified ones, and the reader will check the first three.

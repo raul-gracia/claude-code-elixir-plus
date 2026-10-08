@@ -25,6 +25,7 @@ plugins/elixir-plus/
   skills/<skill-name>/
     SKILL.md                      skill content; frontmatter name MUST equal dir name
     references/*.md               progressive-disclosure deep-dives
+    agents/*.md                   subagent specs (elixir-audit only)
 README.md                         user-facing
 EVAL_PLAN.md                      plugin evaluation methodology (legacy, kept for reference)
 evals/ash-workflows/              current behavioral evaluation prompts, rubric and evidence
@@ -68,9 +69,9 @@ One capability skill: `elixir-runtime`. It is auto-injected via the `SessionStar
 
 Keep general Elixir/OTP/Phoenix/Ecto/Ash tutorials upstream. The AshOban reference is the specifically approved workflow scope from DC-198; preserve contextual choices such as ordinary workers for temporary imports. New guidance must justify its context cost with a capability, a verified compatibility issue or evaluated behavior. Retain source versions and concrete revisit conditions for operational facts.
 
-One workflow skill: `elixir-audit`. It is invoked explicitly (`/elixir-audit`, optionally with a path for a targeted pass) and is never injected by a hook. `SKILL.md` holds the execution order and output shape; `references/*.md` hold stack-gated checklists loaded only when `mix.exs` shows the matching dependency; `agents/*.md` are subagent specs for the measured ExCoveralls, Credo/Dialyzer and Sobelow passes, which run in a disposable git worktree so the audited repo is never modified. Keep it a procedure: new content must change what the audit does or reports, not restate framework knowledge.
+One workflow skill: `elixir-audit`. It is invoked explicitly (`/elixir-audit`, optionally with a path for a targeted pass) and is never injected by a hook. `SKILL.md` holds the execution order and output shape; five `references/*.md` checklists always load and the stack-specific ones are gated on the stack detected from `mix.lock` plus each app's `mix.exs`; `agents/*.md` are subagent specs for the measured ExCoveralls, Credo/Dialyzer and Sobelow passes, which run in a disposable git worktree so the audited repo is never modified. Keep it a procedure: new content must change what the audit does or reports, not restate framework knowledge.
 
-Reference docs live in `skills/<skill>/references/*.md` and are linked from `SKILL.md` for conditional loading. The current references are `ash-oban.md`, `oban-pro.md` and `performance.md`; keep Pro chunk mechanics in `oban-pro.md`. `performance.md` holds only measured findings with their source and revisit conditions.
+Reference docs live in `skills/<skill>/references/*.md` and are linked from `SKILL.md` for conditional loading. `elixir-runtime`'s references are `ash-oban.md`, `oban-pro.md` and `performance.md`; `elixir-audit` has its own `references/` (audit checklists and the report template) and `agents/` (subagent specs). Keep Pro chunk mechanics in `oban-pro.md`. `performance.md` holds only measured findings with their source and revisit conditions.
 
 ## Hooks
 

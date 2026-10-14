@@ -1,6 +1,6 @@
 ---
 name: elixir-audit
-description: Perform comprehensive code audits of Elixir, Phoenix, LiveView and Ash applications. Use this skill when the user requests a code audit, architecture review, quality assessment, onboarding review, or "what are the pitfalls" analysis of an Elixir codebase. Examines architecture and context boundaries, testing posture, security, OTP and process design, Ecto data access and migrations, the Phoenix web layer, LiveView, Ash resources and policies, and the official Elixir anti-patterns, checking claims against primary sources and the installed versions' docs. Reads source only: it never runs Mix, the test suite, or any database. Outputs a markdown report grouped by category with severity levels (Critical, High, Medium, Low).
+description: Perform comprehensive code audits of Elixir, Phoenix, LiveView and Ash applications. Use this skill when the user requests a code audit, architecture review, quality assessment, onboarding review, or "what are the pitfalls" analysis of an Elixir codebase. Examines architecture and context boundaries, testing posture, security, OTP and process design, Ecto data access and migrations, the Phoenix web layer, LiveView, Ash resources and policies, and the official Elixir anti-patterns, checking claims against primary sources and the installed versions' docs. Reads source only and never runs Mix, the test suite, or any database. Outputs a markdown report grouped by category with severity levels (Critical, High, Medium, Low).
 disable-model-invocation: true
 ---
 

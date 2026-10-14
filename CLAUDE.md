@@ -113,7 +113,8 @@ Only add a skill if it clears one of the two bars in "What this repo is": durabl
 3. If the skill needs deep-dive content, put it in `skills/<name>/references/*.md` and link it from `SKILL.md`.
 4. Add a row to `README.md`.
 5. Bump `plugins/elixir-plus/.claude-plugin/plugin.json` `version`.
-6. Commit + push.
+6. Run `tests/skills/run.sh`. It parses frontmatter with strict YAML: never put an unquoted `: ` inside the description (Claude Code accepts it, pi rejects the skill).
+7. Commit + push.
 
 The `description` field drives native skill dispatch — the model reads it to decide when the skill applies, so no hand-coded router is needed. Be specific about the file extensions, module patterns, and Elixir-version features that make it relevant.
 

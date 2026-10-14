@@ -93,6 +93,14 @@ tests/hooks/run.sh
 
 59 assertions covering deny/allow cases (including wrapper-bypass and multi-line forms), failure-signature collapsing, session isolation, path traversal, interrupt handling, the `hooks.json` contract, and the fail-open guarantee on malformed input.
 
+### Testing skill frontmatter
+
+```bash
+tests/skills/run.sh
+```
+
+Parses every `SKILL.md` frontmatter with a strict YAML parser (Ruby Psych) and checks `name` matches the directory and `description` is present. Claude Code tolerates some invalid YAML, such as an unquoted `: ` inside a description; pi and other harnesses that read the skill-sync copies in `~/.agents/skills/` reject it and drop the skill.
+
 Note on `hooks.json`: Claude Code hook `timeout` values are in **seconds**, not milliseconds. The suite asserts no timeout exceeds 300, because a millisecond-style `10000` would let a stalled hook hold up a tool call for nearly three hours.
 
 ## LSP

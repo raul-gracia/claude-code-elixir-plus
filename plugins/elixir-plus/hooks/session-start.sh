@@ -20,6 +20,11 @@ fi
 
 # Read the elixir-runtime SKILL.md
 skill_content=$(cat "${PLUGIN_ROOT}/skills/elixir-runtime/SKILL.md" 2>&1 || echo "Error reading skill")
+# Name the skill directory, as native skill loading does, so relative paths in
+# the skill (scripts/, references/) resolve.
+skill_content="Base directory for this skill: ${PLUGIN_ROOT}/skills/elixir-runtime
+
+${skill_content}"
 
 # Escape for JSON using pure bash (works on macOS and Linux)
 escape_for_json() {

@@ -223,6 +223,17 @@ done
 [ "$missing" -eq 0 ] && report ok "all hooks.json scripts exist and are executable" \
   || report fail "all hooks.json scripts exist and are executable" "$missing missing"
 
+# --- session-start ----------------------------------------------------------
+echo "session-start"
+SS=$(mktemp -d); echo x > "$SS/mix.exs"
+ctx_ss=$( (cd "$SS" && "$HOOKS/session-start.sh" </dev/null) | jq -r '.hookSpecificOutput.additionalContext' 2>/dev/null)
+base_ss=$(printf '%s\n' "$ctx_ss" | sed -n '1s/^Base directory for this skill: //p')
+[ -n "$base_ss" ] && [ -f "$base_ss/SKILL.md" ] && report ok "session-start names the skill directory" \
+  || report fail "session-start names the skill directory" "first line: $(printf '%s\n' "$ctx_ss" | head -1)"
+[ -x "$base_ss/scripts/mix-test-wt.sh" ] && report ok "scripts/mix-test-wt.sh resolves from that directory" \
+  || report fail "scripts/mix-test-wt.sh resolves from that directory" "$base_ss/scripts/mix-test-wt.sh"
+rm -rf "$SS"
+
 # --- fail-open contract -----------------------------------------------------
 echo "fail-open"
 for h in block-dangerous-ops error-critic; do

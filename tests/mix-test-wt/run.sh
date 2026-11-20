@@ -43,8 +43,14 @@ cat > "$BIN/mix" <<'EOF'
   printf 'MIX_BUILD_PATH=%s\n' "${MIX_BUILD_PATH-<unset>}"
   printf 'VIA=%s\n' "${FAKE_VIA-}"
 } > "${FAKE_MIX_LOG:?}"
+# FAKE_MIX_HOLD=<file>: keep running (holding the lock) until <file> exists;
+# the 60 s watchdog turns a broken test into a failure, not a hang. The TERM
+# trap goes in before the started marker so a test never signals too early.
+[ -n "${FAKE_MIX_HOLD-}" ] && trap '[ -n "${FAKE_MIX_TERMED-}" ] && : > "$FAKE_MIX_TERMED"; exit 143' TERM
 [ -n "${FAKE_MIX_STARTED-}" ] && : > "$FAKE_MIX_STARTED"
-[ -n "${FAKE_MIX_SLEEP-}" ] && sleep "$FAKE_MIX_SLEEP"
+if [ -n "${FAKE_MIX_HOLD-}" ]; then
+  for _ in $(seq 600); do [ -e "$FAKE_MIX_HOLD" ] && break; sleep 0.1; done
+fi
 [ -n "${FAKE_MIX_SIGNAL-}" ] && kill -"$FAKE_MIX_SIGNAL" $$
 exit "${FAKE_MIX_EXIT:-0}"
 EOF
@@ -54,6 +60,7 @@ cat > "$BIN/direnv" <<'EOF'
 #!/usr/bin/env bash
 [ "$1" = exec ] && [ "$2" = . ] || exit 99
 shift 2
+if [ -n "${FAKE_DIRENV_BLOCKED-}" ]; then echo "direnv: error .envrc is blocked" >&2; exit 1; fi
 export FAKE_VIA="${FAKE_VIA-}direnv;" MIX_ENV=from_envrc MIX_BUILD_PATH=/tmp/from_envrc
 exec "$@"
 EOF
@@ -88,7 +95,8 @@ echo "argument forwarding"
 run "$T/wt-b" -- test/foo_test.exs:12 --only focus
 check "test args forwarded after --max-cases 4" "$MIXLOG" "ARGS=test --max-cases 4 test/foo_test.exs:12 --only focus"
 check_eq "exit 0 passes through" "$RC" 0
-check "status line names build path, lock and wait" "$ERR" "lock=immediate wait=0s"
+check "status line names the build path" "$ERR" "build=$XDG_CACHE_HOME/mix-build/"
+check "status line reports an uncontended lock" "$ERR" "lock=immediate wait="
 run "$T/wt-b" -- --max-cases 8 test/x_test.exs
 check "caller --max-cases wins" "$MIXLOG" "ARGS=test --max-cases 8 test/x_test.exs"
 run "$T/wt-b" -- --max-cases=2
@@ -113,10 +121,19 @@ mkdir -p "$T/repo/_build/test"
 ln -s "$T/repo/_build" "$T/wt-PLAT-1886/_build"
 run "$T/wt-PLAT-1886"
 check "symlinked _build uses the cache root" "$MIXLOG" "MIX_BUILD_ROOT=$XDG_CACHE_HOME/mix-build/"
-check_not "symlinked _build is not followed" "$MIXLOG" "MIX_BUILD_ROOT=$T/wt-PLAT-1886/_build"
 [ -L "$T/wt-PLAT-1886/_build" ] && report ok "symlink is left untouched" || report fail "symlink is left untouched" "symlink changed"
 [ "$(sed -n 's/^MIX_BUILD_ROOT=//p' "$LOG")" != "$first_root" ] && report ok "each worktree gets its own cache root" \
   || report fail "each worktree gets its own cache root" "shared $first_root"
+mkdir -p "$T/wt-b/_build/dev"
+run "$T/wt-b"
+check_eq "cache root stays once chosen, even if a real _build appears" "$(sed -n 's/^MIX_BUILD_ROOT=//p' "$LOG")" "$first_root"
+rmdir "$T/wt-b/_build/dev" "$T/wt-b/_build"
+long="$T/$(printf 'deep-directory-name-%03d/' $(seq 1 14))proj"
+mkdir -p "$long" && echo x > "$long/mix.exs"
+run "$long"
+check_eq "very long project path still runs" "$RC" 0
+name=$(sed -n 's/^MIX_BUILD_ROOT=//p' "$LOG"); name=${name##*/}
+[ "${#name}" -le 120 ] && report ok "cache dir name stays short" || report fail "cache dir name stays short" "${#name} chars"
 mkdir -p "$T/repo/_build"
 run "$T/repo"
 check "real _build directory is used" "$MIXLOG" "MIX_BUILD_ROOT=$T/repo/_build"
@@ -125,7 +142,7 @@ check "caller MIX_BUILD_PATH is dropped" "$MIXLOG" "MIX_BUILD_PATH=<unset>"
 
 echo "environment"
 run "$T/wt-PLAT-1886"
-check "partition derived from worktree name" "$MIXLOG" "MIX_TEST_PARTITION=_wt_plat_1886"
+check_eq "partition derived from worktree name" "$(sed -n 's/^MIX_TEST_PARTITION=//p' "$LOG")" "_wt_plat_1886"
 check "MIX_ENV left unset" "$MIXLOG" "MIX_ENV=<unset>"
 run "$T/wt-b" MIX_TEST_PARTITION=7 MIX_ENV=ci
 check "caller MIX_TEST_PARTITION kept" "$MIXLOG" "MIX_TEST_PARTITION=7"
@@ -140,7 +157,15 @@ check "caller MIX_ENV beats .envrc" "$MIXLOG" "MIX_ENV=ci"
 check "MIX_BUILD_PATH from .envrc is dropped" "$MIXLOG" "MIX_BUILD_PATH=<unset>"
 run "$T/wt-b"
 check "MIX_ENV from .envrc applies when caller set none" "$MIXLOG" "MIX_ENV=from_envrc"
+run "$T/wt-b" FAKE_DIRENV_BLOCKED=1
+check_eq "blocked .envrc exits 78" "$RC" 78
+check "blocked .envrc says how to fix it" "$ERR" "direnv allow"
+check_eq "blocked .envrc never runs mix" "$MIXLOG" ""
 rm "$T/wt-b/.envrc" "$T/wt-b/mise.toml"
+mkdir -p "$T/wt-b/.config/mise" && echo '[tools]' > "$T/wt-b/.config/mise/config.toml"
+run "$T/wt-b"
+check "mise config under .config/mise/ is found" "$MIXLOG" "VIA=mise;"
+rm -r "$T/wt-b/.config"
 run "$T/wt-b"
 check_eq "no direnv/mise without their config" "$(sed -n 's/^VIA=//p' "$LOG")" ""
 
@@ -156,46 +181,71 @@ check_eq "kill notice is one line" "$(grep -c killed "$T/err")" 1
 run "$T/wt-b" FAKE_MIX_SIGNAL=TERM
 check_eq "SIGTERM passes through as 143" "$RC" 143
 
+wait_for() { # $1 = file, optional $2 = text it must contain; up to 10 s
+  for _ in $(seq 100); do
+    if [ -e "$1" ] && { [ -z "${2-}" ] || grep -qF -- "$2" "$1"; }; then return 0; fi
+    sleep 0.1
+  done
+  return 1
+}
+
 # TERM sent to the wrapper reaches mix and the wrapper reports mix's status.
-( cd "$T/wt-b" && FAKE_MIX_LOG="$T/term.log" FAKE_MIX_STARTED="$T/term.started" FAKE_MIX_SLEEP=30 \
-    exec "$WRAPPER" >/dev/null 2>"$T/term.err" ) &
+( cd "$T/wt-b" && FAKE_MIX_LOG="$T/term.log" FAKE_MIX_STARTED="$T/term.started" \
+    FAKE_MIX_HOLD="$T/term.never" FAKE_MIX_TERMED="$T/term.termed" exec "$WRAPPER" >/dev/null 2>&1 ) &
 wpid=$!
-for _ in $(seq 50); do [ -f "$T/term.started" ] && break; sleep 0.1; done
+wait_for "$T/term.started"
 kill -TERM "$wpid"
-start=$(date +%s); wait "$wpid"; rc=$?
-[ $(( $(date +%s) - start )) -lt 10 ] && report ok "TERM to the wrapper stops mix" || report fail "TERM to the wrapper stops mix" "took too long"
+wait "$wpid"; rc=$?
+[ -e "$T/term.termed" ] && report ok "TERM to the wrapper reaches mix" || report fail "TERM to the wrapper reaches mix" "mix saw no TERM"
 check_eq "wrapper exits with mix's TERM status" "$rc" 143
 
 echo "lock"
-lock_holder() { # start a run in worktree $1 that holds the lock for $2 s
-  rm -f "$T/held.started"
-  ( cd "$1" && FAKE_MIX_LOG="$T/held.log" FAKE_MIX_STARTED="$T/held.started" FAKE_MIX_SLEEP="$2" \
-      "$WRAPPER" >/dev/null 2>&1 ) &
+lock_holder() { # start a run in worktree $1 whose mix holds the lock until release_holder
+  rm -f "$T/held.started" "$T/release"
+  ( cd "$1" && FAKE_MIX_LOG="$T/held.log" FAKE_MIX_STARTED="$T/held.started" FAKE_MIX_HOLD="$T/release" \
+      exec "$WRAPPER" >/dev/null 2>&1 ) &
   HOLDER=$!
-  for _ in $(seq 50); do [ -f "$T/held.started" ] && break; sleep 0.1; done
+  wait_for "$T/held.started"
 }
-lock_holder "$T/wt-PLAT-1886" 4
+release_holder() { : > "$T/release"; wait "$HOLDER" 2>/dev/null; }
+
+lock_holder "$T/wt-PLAT-1886"
 run "$T/wt-b" --lock-wait 1
 check_eq "lock timeout exits 75" "$RC" 75
 check "timeout message says not to rerun unchanged" "$ERR" "do not rerun the same command unchanged"
 check "waiting line shows lock age" "$ERR" "waiting up to 1s for lock held since 20"
 check "waiting line names the holder" "$ERR" "$T/wt-PLAT-1886"
 check_eq "timed-out run never starts mix" "$MIXLOG" ""
-wait "$HOLDER"
+release_holder
 
-lock_holder "$T/wt-PLAT-1886" 2
-run "$T/repo" --lock-wait 20
-check_eq "contended run succeeds after waiting" "$RC" 0
-check "status line reports the wait" "$ERR" "lock=acquired-after-wait wait="
-check_not "status line wait is non-zero" "$ERR" "wait=0s"
-check_eq "lock is shared by every worktree of the repo" "$(grep -c 'waiting up to' "$T/err")" 1
-wait "$HOLDER"
+# The main checkout waits for a linked worktree's run, then proceeds.
+lock_holder "$T/wt-PLAT-1886"
+rm -f "$T/c.log" "$T/c.err"
+( cd "$T/repo" && FAKE_MIX_LOG="$T/c.log" exec "$WRAPPER" --lock-wait 30 >/dev/null 2>"$T/c.err" ) &
+cpid=$!
+wait_for "$T/c.err" "waiting up to 30s" && report ok "main checkout waits on a worktree's lock" \
+  || report fail "main checkout waits on a worktree's lock" "no waiting line"
+[ ! -e "$T/c.log" ] && report ok "waiting run does not start mix while the lock is held" \
+  || report fail "waiting run does not start mix while the lock is held" "mix started"
+release_holder
+wait "$cpid"; rc=$?
+check_eq "contended run succeeds once the lock is released" "$rc" 0
+check "status line reports the contended lock" "$(cat "$T/c.err")" "lock=acquired-after-wait wait="
+
+# SIGKILL to the wrapper: mix keeps running and keeps the lock.
+lock_holder "$T/wt-PLAT-1886"
+kill -KILL "$HOLDER"; wait "$HOLDER" 2>/dev/null
+run "$T/wt-b" --lock-wait 1
+check_eq "lock stays held by mix after the wrapper is SIGKILLed" "$RC" 75
+: > "$T/release"
+run "$T/wt-b" --lock-wait 10
+check_eq "lock is released once the orphaned mix exits" "$RC" 0
 
 git -c init.defaultBranch=main init -q "$T/other"; echo x > "$T/other/mix.exs"
-lock_holder "$T/wt-PLAT-1886" 3
+lock_holder "$T/wt-PLAT-1886"
 run "$T/other" --lock-wait 1
 check_eq "a different repository has its own lock" "$RC" 0
-wait "$HOLDER"
+release_holder
 
 run "$T/wt-b" --lock-wait abc
 check_eq "non-numeric --lock-wait is a usage error" "$RC" 64

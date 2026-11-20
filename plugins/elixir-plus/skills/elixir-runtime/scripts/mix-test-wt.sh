@@ -8,22 +8,28 @@
 #
 # - Build path: <project>/_build when it is a real directory. Otherwise (missing
 #   or a symlink) a stable per-worktree root under
-#   ${XDG_CACHE_HOME:-~/.cache}/mix-build/, passed as MIX_BUILD_ROOT. It is kept
-#   across runs; the first run in a worktree compiles from scratch. Another
-#   checkout's build output is never copied, moved or re-linked, and a caller's
-#   MIX_BUILD_PATH is dropped.
+#   ${XDG_CACHE_HOME:-~/.cache}/mix-build/, passed as MIX_BUILD_ROOT. Once a
+#   worktree has a cache root it keeps using it, even if a real _build appears
+#   later (for example from a plain `mix compile`). The first run in a worktree
+#   compiles from scratch. Another checkout's build output is never copied,
+#   moved or re-linked, and a caller's MIX_BUILD_PATH is dropped. Cache roots
+#   are not cleaned up; delete one after removing its worktree.
 # - Lock: one flock per repository (all worktrees share it), held from before
-#   compilation until the command ends. Default wait 1800 s (--lock-wait or
+#   compilation until mix exits. mix inherits it, so the lock stays held while
+#   mix runs even if this wrapper is killed. Default wait 1800 s (--lock-wait or
 #   MIX_TEST_WT_LOCK_WAIT). On timeout it exits 75.
 # - Environment: runs through `direnv exec .` when .envrc exists and
-#   `mise exec --` when mise config exists. A caller's MIX_ENV and
+#   `mise exec --` when mise config exists. If either fails before mix starts
+#   (e.g. .envrc not allowed or mise config not trusted for this worktree), it
+#   exits 78 without running mix. A caller's MIX_ENV and
 #   MIX_TEST_PARTITION are kept; an unset MIX_TEST_PARTITION is derived from
 #   the worktree directory name (skipped when --partitions is passed).
 # - Test mode adds `--max-cases 4` unless the caller passed --max-cases.
 #   --precommit runs `mix precommit` and accepts no test options.
 # - The command's exit status is passed through unchanged.
 #
-# Exit codes of its own: 64 usage error, 69 flock missing, 75 lock wait timed out.
+# Exit codes of its own: 64 usage error, 69 flock missing, 73 cannot create the
+# cache dir, 75 lock wait timed out, 78 direnv/mise setup failed.
 
 set -uo pipefail
 
@@ -85,15 +91,20 @@ worktree=$(git rev-parse --show-toplevel 2>/dev/null) || worktree=$project
 common_dir=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) \
   || common_dir=$project
 cache_root=${XDG_CACHE_HOME:-$HOME/.cache}/mix-build
-mkdir -p "$cache_root"
+mkdir -p "$cache_root" || { say "cannot create $cache_root"; exit 73; }
 
 # --- build path -------------------------------------------------------------
-if [ -d "$project/_build" ] && [ ! -L "$project/_build" ]; then
+# The slug keeps the path's tail readable; the hash keeps it unique and the
+# name well under the 255-byte file name limit.
+slug=$(printf '%s' "${project#/}" | tr -c 'A-Za-z0-9._-' '_' | tail -c 100)
+cache_build=$cache_root/$slug-$(sha1 "$project" | cut -c1-12)
+if [ -d "$cache_build" ]; then
+  build_root=$cache_build
+elif [ -d "$project/_build" ] && [ ! -L "$project/_build" ]; then
   build_root=$project/_build
 else
-  slug=$(printf '%s' "${project#/}" | tr -c 'A-Za-z0-9._-' '_')
-  build_root=$cache_root/$slug-$(sha1 "$project" | cut -c1-8)
-  mkdir -p "$build_root"
+  build_root=$cache_build
+  mkdir -p "$build_root" || { say "cannot create $build_root"; exit 73; }
 fi
 
 # --- test partition ---------------------------------------------------------
@@ -108,8 +119,27 @@ has_arg() { # $1 = option name; matches "--opt" and "--opt=value"
 partition_set=${MIX_TEST_PARTITION+x}
 partition=${MIX_TEST_PARTITION-}
 if [ -z "$partition_set" ] && ! has_arg --partitions; then
-  partition=_$(basename "$worktree" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9_' '_' | cut -c1-40)
+  partition=_$(printf '%s' "${worktree##*/}" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9_' '_' | cut -c1-40)
   partition_set=x
+fi
+
+# --- direnv / mise ---------------------------------------------------------
+prefix=()
+if [ -f .envrc ] && command -v direnv >/dev/null 2>&1; then
+  prefix+=(direnv exec .)
+fi
+if command -v mise >/dev/null 2>&1; then
+  for f in mise.toml mise.local.toml .mise.toml .mise.local.toml mise/config.toml \
+           .mise/config.toml .config/mise.toml .config/mise/config.toml .tool-versions; do
+    if [ -f "$f" ]; then prefix+=(mise exec --); break; fi
+  done
+fi
+# Check the chain loads before taking the lock: a new worktree's .envrc or
+# mise config is often not allowed/trusted yet, and that must not look like a
+# mix failure.
+if [ ${#prefix[@]} -gt 0 ] && ! "${prefix[@]}" true </dev/null >/dev/null; then
+  say "'${prefix[*]}' failed, so mix was not run (exit 78). If .envrc or the mise config is not allowed/trusted for this worktree, review it and run 'direnv allow' / 'mise trust', or report it."
+  exit 78
 fi
 
 # --- lock -------------------------------------------------------------------
@@ -149,35 +179,36 @@ env_cmd=(env -u MIX_BUILD_PATH "MIX_BUILD_ROOT=$build_root")
 [ -n "$partition_set" ] && env_cmd+=("MIX_TEST_PARTITION=$partition")
 [ -n "${MIX_ENV+x}" ] && env_cmd+=("MIX_ENV=$MIX_ENV")
 
-cmd=()
-if [ -f .envrc ] && command -v direnv >/dev/null 2>&1; then
-  cmd+=(direnv exec .)
-fi
-for f in mise.toml .mise.toml .config/mise.toml mise/config.toml .tool-versions; do
-  if [ -f "$f" ] && command -v mise >/dev/null 2>&1; then
-    cmd+=(mise exec --)
-    break
-  fi
-done
-cmd+=("${env_cmd[@]}" "${mix_cmd[@]}")
+cmd=("${prefix[@]+"${prefix[@]}"}" "${env_cmd[@]}" "${mix_cmd[@]}")
 
 say "build=$build_root lock=$lock_outcome wait=${waited}s partition=${partition_set:+$partition} mode=$mode"
 
 # Run in the background so TERM/INT/HUP sent to this wrapper reach mix too.
-# The child does not inherit the lock fd, so a daemon it leaves behind cannot
-# hold the lock forever. Stdin is passed through explicitly (async commands
-# otherwise get /dev/null).
+# mix inherits the lock fd (9), so the lock is held for as long as mix runs,
+# even if this wrapper dies first. Stdin is passed through explicitly (async
+# commands otherwise get /dev/null).
+child=
+# shellcheck disable=SC2329  # invoked by the trap below
+forward() { if [ -n "$child" ]; then kill -TERM "$child" 2>/dev/null; else exit 143; fi; }
+trap forward TERM INT HUP
 exec 8<&0
-"${cmd[@]}" 0<&8 8<&- 9>&- &
+"${cmd[@]}" 0<&8 8<&- &
 child=$!
 exec 8<&-
-trap 'kill -TERM "$child" 2>/dev/null' TERM INT HUP
 
+# A trapped signal interrupts `wait` with 128+signal. Keep waiting until mix
+# has exited; if the last wait was interrupted, wait once more for mix's own
+# status (bash 5 returns it again; older bash returns 127, so keep ours).
 while :; do
   wait "$child"
   status=$?
   kill -0 "$child" 2>/dev/null || break
 done
+if [ "$status" -gt 128 ]; then
+  wait "$child"
+  again=$?
+  [ "$again" -ne 127 ] && status=$again
+fi
 
 if [ "$status" -gt 128 ] && [ "$status" -le 192 ]; then
   sig=$(kill -l "$((status - 128))" 2>/dev/null || echo "$((status - 128))")

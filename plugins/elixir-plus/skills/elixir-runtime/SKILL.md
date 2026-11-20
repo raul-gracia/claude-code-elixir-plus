@@ -49,7 +49,7 @@ In a git worktree, run focused tests and precommit through this skill's `scripts
 
 ## Headless command preflight
 
-`rg` already skips gitignored `deps/` and `_build/`; pass no exclusions. `:!path/**` is git pathspec syntax and makes rg error on a missing path. To search inside a dependency, first check that `deps/<name>` exists (fresh worktrees may not have run `mix deps.get`), and if it doesn't, report it rather than guessing paths. Before a DB-backed `mix test` in a headless/sandboxed run, if any command reports `:eperm`, `not owner`, or a Postgrex connection failure to localhost, stop DB-backed test attempts for that run, report them as unverified, and continue only with checks that do not need the database (e.g. `mix compile --warnings-as-errors`, `mix format --check-formatted`).
+`rg` already skips gitignored `deps/` and `_build/`; pass no exclusions. `:!path/**` is git pathspec syntax and makes rg error on a missing path. Before `rg` or `sed` on any dependency source path or glob (`deps/<name>/...`), run `ls deps/<name>` (fresh worktrees may not have run `mix deps.get`); if it is missing, report it rather than guessing paths. Before a DB-backed `mix test` in a headless/sandboxed run, if any command reports `:eperm`, `not owner`, or a Postgrex connection failure to localhost, stop DB-backed test attempts for that run, report them as unverified, and continue only with checks that do not need the database (e.g. `mix compile --warnings-as-errors`, `mix format --check-formatted`).
 
 ## Version facts
 

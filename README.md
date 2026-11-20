@@ -23,13 +23,14 @@ The plugin ships two skills. `elixir-runtime` is a capability grant for Elixir/P
 | `elixir-runtime` | Work on Elixir/Phoenix projects or Ash resources, policies and background workflows | Tidewave introspection, installed-version documentation routing, optional AshOban workflow guidance and an Oban Pro reference. |
 | `elixir-audit` | Run `/elixir-audit`, or `/elixir-audit lib/my_app/accounts` for a targeted pass | Full or targeted codebase audit: architecture and context boundaries, the official Elixir anti-patterns, OTP and process design, Ecto queries/indexes/migrations, security, ExUnit posture, and LiveView or Ash sections gated on stack detection from `mix.lock` plus each app's `mix.exs`. It reads source only: it never runs Mix, the test suite or a database, reads existing tool output (Credo, Dialyzer, Sobelow, coverage) when the repo already has it, and otherwise lists the commands to run yourself. Orientation mode produces private onboarding notes; review mode produces `ELIXIR_AUDIT_REPORT.md`. |
 
-### Reference files
+### Reference files and scripts
 
 | File | Skill | Why it's here |
 |------|-------|---------------|
 | `elixir-runtime/references/oban-pro.md` | `elixir-runtime` | Oban Pro (workflows, grafts, cascades, batches) is commercial/closed-source and under-represented in training data. |
 | `elixir-runtime/references/performance.md` | `elixir-runtime` | Measured request-path performance traps for Bandit/Plug, SQLite and websocket fan-out on OTP 28+, plus how to profile a release. |
 | `elixir-runtime/references/ash-oban.md` | `elixir-runtime` | Conditional guidance for Ash background work, including domain state, reconciliation, identity and version-sensitive scheduling. |
+| `elixir-runtime/scripts/mix-test-wt.sh` | `elixir-runtime` | Runs `mix test` or `mix precommit` in a git worktree with a stable per-worktree build path and one Mix run per repository at a time, so parallel agent sessions don't recompile everything into `/tmp` or get killed competing for memory. Tests: `tests/mix-test-wt/run.sh`. |
 | `elixir-audit/references/report_template.md` | `elixir-audit` | The report template (orientation and review variants). The audit ships no fact checklists: `SKILL.md` lists what to examine per stack-gated section and sends facts to primary sources (the official Elixir anti-patterns guide, Sobelow's check list, and the installed versions' hexdocs or `deps/` source). |
 
 ### Why these two, and nothing else
